@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+out/
+release/
+.cache/
+docs/
+src/
+*.exe
+!tools/rcedit-x64.exe
+*.blockmap
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Logs (electron-log)
+*.log
+logs/
+
+# Temp / editor backup files
+*.tmp
+*~
+
+# Offline model cache (user data)
+translator-data/
+models/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

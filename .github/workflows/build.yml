@@ -1,0 +1,59 @@
+name: Build Windows
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    # Code signing is disabled. Keep only the certificate auto-discovery guard:
+    # DO NOT set CSC_LINK / WIN_CSC_LINK here (even to "") — electron-builder's
+    # getCscLink() explicitly allows empty strings, so an empty value is resolved
+    # as a certificate file path and fails the build with
+    # "Env WIN_CSC_LINK is not correct, cannot resolve: <projectDir> not a file".
+    # Signing is disabled entirely by the config (`win.sign: null` +
+    # `signAndEditExecutable: false`), and the icon/version metadata are applied
+    # by the afterPack hook with the committed tools/rcedit-x64.exe.
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # better-sqlite3 (a production dependency) is built for a specific V8 ABI.
+      # Installing with npm_config_runtime=electron makes its prebuild-install
+      # fetch the Electron 30 (modules v123) binary instead of the Node one, so
+      # the packaged app loads it without a rebuild (npmRebuild is disabled).
+      - name: Install dependencies
+        run: npm ci
+        env:
+          npm_config_runtime: electron
+          npm_config_target: "30.5.1"
+
+      - name: Build main process + renderer
+        run: npm run build
+
+      # Signing is fully disabled (see the env above + electron-builder.config.js).
+      # The app icon + version metadata are applied by the afterPack hook with the
+      # committed tools/rcedit-x64.exe, so CI and local builds behave identically.
+      - name: Package installer & portable exe
+        run: npm run dist:ci
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-build
+          path: |
+            release/*.exe
+            release/*.blockmap
+            release/latest.yml
+          if-no-files-found: error
+          retention-days: 14
