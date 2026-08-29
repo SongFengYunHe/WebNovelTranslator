@@ -7,7 +7,6 @@ out/
 release/
 .cache/
 docs/
-src/
 *.exe
 !tools/rcedit-x64.exe
 *.blockmap

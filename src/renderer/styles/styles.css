@@ -1,0 +1,1050 @@
+/* ---- Global app styles (main panel) ---- */
+:root {
+  --bg: #f5f6fa;
+  --surface: #ffffff;
+  --border: #e3e6ee;
+  --text: #1f2430;
+  --muted: #7a8194;
+  --primary: #4f6ef7;
+  --primary-dark: #3b55d6;
+  --accent: #16a085;
+  --danger: #e74c3c;
+  --radius: 10px;
+  --shadow: 0 2px 10px rgba(31, 36, 48, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: "Segoe UI", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* ---- Header / tabs ---- */
+/* v3.0.0: the window is frameless, so the header doubles as the drag region.
+   Every interactive element inside must opt out with `no-drag`. */
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 16px;
+  height: 48px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  -webkit-app-region: drag;
+}
+
+.app-header .tabs,
+.app-header .icon-btn,
+.app-header select,
+.app-header input,
+.app-header button {
+  -webkit-app-region: no-drag;
+}
+
+.app-title {
+  font-weight: 700;
+  font-size: 15px;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  -webkit-app-region: drag;
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+}
+
+.tab {
+  border: none;
+  background: transparent;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--muted);
+  transition: background 0.15s, color 0.15s;
+}
+
+.tab:hover {
+  background: #eef1f8;
+  color: var(--text);
+}
+
+.tab.active {
+  background: #e6ecff;
+  color: var(--primary-dark);
+  font-weight: 600;
+}
+
+.icon-btn {
+  border: none;
+  background: transparent;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 18px;
+  color: var(--muted);
+}
+
+.icon-btn:hover {
+  background: #eef1f8;
+  color: var(--text);
+}
+
+/* Frameless-window control buttons in the header (v3.0.0). */
+.window-btn {
+  width: 30px;
+  height: 30px;
+  font-size: 14px;
+  border-radius: 6px;
+}
+
+.window-btn.close {
+  font-size: 15px;
+  color: var(--muted);
+}
+
+.window-btn.close:hover {
+  background: var(--danger);
+  color: #fff;
+}
+
+/* Glossary switcher in the translate toolbar (v3.0.0). */
+.glossary-switch {
+  cursor: help;
+}
+
+.glossary-select {
+  max-width: 180px;
+}
+
+/* ---- Body / panels ---- */
+.app-body {
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
+}
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* ---- Toolbar ---- */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.pair {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pair-label {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.arrow {
+  color: var(--muted);
+}
+
+select,
+input,
+textarea {
+  font: inherit;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: #fff;
+  outline: none;
+}
+
+select:focus,
+input:focus,
+textarea:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(79, 110, 247, 0.15);
+}
+
+/* ---- Buttons ---- */
+.btn {
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--text);
+  border-radius: 8px;
+  padding: 8px 14px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+}
+
+.btn:hover:not(:disabled) {
+  background: #f0f2f8;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn.primary {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.btn.primary:hover:not(:disabled) {
+  background: var(--primary-dark);
+}
+
+.btn.accent {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.btn.accent:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.btn.ghost {
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+}
+
+.btn.small {
+  padding: 5px 10px;
+  font-size: 12px;
+}
+
+.chip {
+  background: #eef4ff;
+  color: var(--primary-dark);
+  border: 1px solid #d6e1ff;
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ---- Translate panel ---- */
+.error-banner {
+  background: #fdeceb;
+  color: #b23a30;
+  border: 1px solid #f5c6c2;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  word-break: break-word;
+}
+
+.input-area {
+  margin-bottom: 12px;
+}
+
+.source-input {
+  width: 100%;
+  min-height: 150px;
+  resize: vertical;
+  line-height: 1.6;
+}
+
+.spinner-row {
+  color: var(--muted);
+  text-align: center;
+  padding: 18px;
+}
+
+.result-area {
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+
+.result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.result-title {
+  font-weight: 600;
+}
+
+.side-by-side {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 42vh;
+  overflow: auto;
+}
+
+.para-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.para {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.para-orig {
+  background: #fafbfe;
+  color: #555c6b;
+}
+
+.para-trans {
+  background: #f4f7ff;
+  border-color: #d6e1ff;
+}
+
+/* ---- Browser panel ---- */
+.browser-panel {
+  overflow: hidden;
+}
+
+.url-input {
+  flex: 1;
+  min-width: 220px;
+}
+
+.status-bar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 10px;
+  min-height: 18px;
+}
+
+.page-title {
+  color: var(--text);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 50%;
+}
+
+.webview-wrap {
+  flex: 1;
+  min-height: 260px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.webview {
+  width: 100%;
+  height: 100%;
+  display: flex;
+}
+
+.extracted-wrap {
+  margin-top: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.extracted-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: #f7f8fb;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.extracted-text {
+  margin: 0;
+  padding: 12px;
+  max-height: 200px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* ---- Glossary panel ---- */
+.glossary-panel {
+  height: 100%;
+  overflow: hidden;
+}
+
+.glossary-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 16px;
+  height: 100%;
+}
+
+.glossary-sidebar {
+  border-right: 1px solid var(--border);
+  padding-right: 16px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.glossary-sidebar h3,
+.glossary-editor h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+
+.active-select {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.active-select label {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.glossary-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.glossary-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.glossary-item:hover {
+  background: #f2f4fa;
+}
+
+.glossary-item.selected {
+  background: #e6ecff;
+  border-color: #d6e1ff;
+}
+
+.glossary-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.glossary-count {
+  color: var(--muted);
+  font-size: 11px;
+  background: #eef0f5;
+  border-radius: 999px;
+  padding: 1px 7px;
+}
+
+.glossary-actions {
+  display: flex;
+  gap: 2px;
+}
+
+.mini-btn {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--muted);
+  border-radius: 6px;
+  width: 22px;
+  height: 22px;
+  line-height: 1;
+}
+
+.mini-btn:hover {
+  background: #e6e9f2;
+  color: var(--text);
+}
+
+.mini-btn.danger:hover {
+  background: #fdeceb;
+  color: var(--danger);
+}
+
+.rename-input {
+  width: 100%;
+  padding: 4px 6px;
+}
+
+.new-glossary {
+  display: flex;
+  gap: 6px;
+}
+
+.new-glossary input {
+  flex: 1;
+}
+
+.glossary-editor {
+  overflow: auto;
+}
+
+.editor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.editor-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.entry-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.entry-table th {
+  text-align: left;
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 500;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.entry-table td {
+  padding: 4px 6px;
+}
+
+.entry-table input {
+  width: 100%;
+  padding: 6px 8px;
+}
+
+.arrow-cell {
+  width: 40px;
+  text-align: center;
+  color: var(--muted);
+}
+
+.muted {
+  color: var(--muted);
+}
+
+code {
+  background: #eef0f5;
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 12px;
+}
+
+/* ---- Settings panel ---- */
+/* v3.0.1: the settings container covers the whole window (height 100vh,
+   overflow hidden, gray background). `max-height: 100%` clamps it to the area
+   below the fixed app header so the pinned footer never gets clipped. Form
+   content scrolls inside `.settings-scroll`; the Save/Test bar is pinned to
+   the bottom. */
+.settings-panel {
+  height: 100vh;
+  max-height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0;
+  max-width: none;
+}
+
+/* Scrollable middle area: every input field, section and description lives
+   here. `flex: 1` makes it absorb all leftover height between the top of the
+   window and the fixed footer below. */
+.settings-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  min-height: 0;
+}
+
+/* v3.0.0: fields and descriptions are laid out as a single vertical flex
+   column so inputs never float over the gray page background. */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+}
+
+.field span {
+  font-weight: 500;
+  font-size: 13px;
+}
+
+.field small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+/* Save / Test actions: fixed footer pinned to the bottom of the window.
+   `flex-shrink: 0` keeps it from being squeezed or scrolling away with the
+   content; the white background + top border separate it from the scroll area. */
+.settings-actions {
+  display: flex;
+  gap: 10px;
+  flex-shrink: 0;
+  padding: 14px 20px;
+  border-top: 1px solid var(--border);
+  background: #fff;
+  z-index: 5;
+}
+
+.test-result {
+  margin-top: 14px;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+  word-break: break-word;
+}
+
+.test-result.ok {
+  background: #eafaf2;
+  color: #146b4a;
+  border: 1px solid #bfe8d5;
+}
+
+.test-result.err {
+  background: #fdeceb;
+  color: #b23a30;
+  border: 1px solid #f5c6c2;
+}
+
+.settings-info {
+  margin-top: 24px;
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.settings-info h4 {
+  margin: 0 0 6px;
+  color: var(--text);
+}
+
+/* ---- Settings v2 sections (provider / hotkey / offline / updates) ---- */
+.settings-section {
+  margin-top: 22px;
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.settings-section h4 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.hotkey-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.hotkey-input {
+  min-width: 180px;
+  font-family: "Consolas", "Courier New", monospace;
+}
+
+.inline-success {
+  background: #eafaf2;
+  color: #146b4a;
+  border: 1px solid #bfe8d5;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
+.inline-error {
+  background: #fdeceb;
+  color: #b23a30;
+  border: 1px solid #f5c6c2;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+  word-break: break-word;
+}
+
+.offline-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.progress-track {
+  height: 10px;
+  border-radius: 999px;
+  background: #eef0f5;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 999px;
+  transition: width 0.2s ease;
+}
+
+/* ---- History panel ---- */
+.history-panel {
+  overflow: auto;
+}
+
+.search-input {
+  flex: 1;
+  min-width: 200px;
+}
+
+.history-total {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.history-table th {
+  text-align: left;
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 500;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: #fff;
+}
+
+.history-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #f0f2f7;
+  vertical-align: top;
+}
+
+.history-row {
+  cursor: pointer;
+}
+
+.history-row:hover td {
+  background: #f7f8fc;
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+.chapter-cell {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cell-clip {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row-actions {
+  width: 60px;
+  display: flex;
+  gap: 4px;
+  justify-content: flex-end;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 14px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* ---- Modal (history detail) ---- */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 24, 34, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.modal {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.18);
+  width: min(760px, 92vw);
+  max-height: 86vh;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.modal-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.modal-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  overflow: auto;
+  min-height: 0;
+  flex: 1;
+}
+
+.detail-col {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+}
+
+.detail-label {
+  font-size: 12px;
+  color: var(--muted);
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  background: #fafbfe;
+}
+
+.detail-text {
+  margin: 0;
+  padding: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.7;
+  overflow: auto;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+  justify-content: flex-end;
+}
+
+/* ---- Translate panel v2 ---- */
+.chapter-input {
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.offline-chip {
+  background: #eafaf2;
+  color: #146b4a;
+  border-color: #bfe8d5;
+}
+
+/* ---- Toast (main-process notifications) ---- */
+.toast {
+  position: fixed;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #2a2f3d;
+  color: #fff;
+  border-radius: 10px;
+  padding: 10px 16px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+  z-index: 100;
+  max-width: 420px;
+  text-align: center;
+  animation: toast-in 0.18s ease;
+}
+
+.toast-title {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.toast-body {
+  font-size: 12px;
+  opacity: 0.9;
+  margin-top: 2px;
+  word-break: break-word;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* ---- Onboarding banner ---- */
+/* 悬浮横幅显示时给主内容留出底部空间，避免遮挡滚动内容（不产生溢出）。 */
+.app-body.with-banner {
+  padding-bottom: 76px;
+}
+
+/* v3.0.1: on the Settings tab the page manages its own scrolling (scrollable
+   middle + fixed footer), so the body becomes a flush, non-scrolling flex
+   container and the panel stretches to cover the entire window content area. */
+.app-body.is-settings {
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+}
+
+.onboarding-banner {
+  position: fixed;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #fff8ec;
+  border: 1px solid #f3dfb4;
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: var(--shadow);
+  max-width: 92%;
+  z-index: 90;
+}
+
+.onboarding-text {
+  font-size: 12px;
+  color: #7a5c1e;
+  line-height: 1.5;
+}
+
+/* ---- Danger button variant ---- */
+.btn.danger {
+  border-color: var(--danger);
+  color: var(--danger);
+  background: #fff;
+}
+
+.btn.danger:hover:not(:disabled) {
+  background: #fdeceb;
+}
