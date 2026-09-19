@@ -9,10 +9,12 @@ import type { TranslateResult } from '../shared/types';
 import { friendlyApiError, friendlyNetworkError } from '../shared/api-errors';
 import { chunkText } from '../shared/chunking';
 import { anySignal, delay, runWithConcurrency } from '../shared/concurrency';
+import { buildSystemPrompt } from '../shared/prompt-builder';
 import { MAX_ATTEMPTS, backoffDelayMs, isRetryableError, isRetryableStatus } from '../shared/retry';
 import log from './logger';
 import { mainLocale, mt } from './i18n';
 import { getSettings, normalizeBaseUrl } from './settings';
+import { getGlossaryById } from './services/glossary';
 import { cacheTranslation, getCachedTranslation, translationCacheKey } from './translation-cache';
 
 /** 单次请求超时，独立于任务级的取消信号。 */
@@ -169,6 +171,24 @@ async function translateChunkWithRetry(
 }
 
 /**
+ * 组装系统提示词。
+ *
+ * 界面路径会传入自己组装好的提示词（其中的术语表已按该段文本过滤）；全局快捷键
+ * 路径留空，在此按当前语言对与术语表补齐——两条路径因此共用同一套提示词与术语
+ * 注入规则，不会各自漂移。
+ */
+function resolveSystemPrompt(text: string, provided: string): string {
+  if (provided && provided.trim()) return provided;
+  const settings = getSettings();
+  return buildSystemPrompt(
+    settings.sourceLang,
+    settings.targetLang,
+    getGlossaryById(settings.activeGlossaryId),
+    text
+  );
+}
+
+/**
  * 使用当前已保存的设置翻译 `text`。
  *
  * `systemPrompt` 由调用方（界面 / 全局快捷键）组装，其中的术语表已按文本过滤。
@@ -189,6 +209,8 @@ export async function translateViaApi(
     return { success: false, error: mt('main.translate.emptyInput') };
   }
 
+  const prompt = resolveSystemPrompt(text, systemPrompt);
+
   const job = new AbortController();
   activeJobs.add(job);
   const { signal } = job;
@@ -203,7 +225,7 @@ export async function translateViaApi(
     await runWithConcurrency(chunks, MAX_CONCURRENT_CHUNKS, async (chunk, index) => {
       const cacheKey = translationCacheKey({
         text: chunk,
-        systemPrompt,
+        systemPrompt: prompt,
         model: settings.model,
         baseUrl,
       });
@@ -212,7 +234,7 @@ export async function translateViaApi(
       if (cached !== undefined) {
         results[index] = { ok: true, text: cached, retryable: false };
       } else {
-        const outcome = await translateChunkWithRetry(chunk, systemPrompt, signal);
+        const outcome = await translateChunkWithRetry(chunk, prompt, signal);
         results[index] = outcome;
         if (outcome.ok) cacheTranslation(cacheKey, outcome.text);
       }

@@ -52,7 +52,7 @@ import {
   queryHistory,
 } from './services/db';
 import { cancelActiveJobs, translateViaApi } from './translate';
-import { checkForUpdates, promptForUpdate } from './services/update';
+import { checkForUpdates } from './services/update';
 import { ensureModel, getOfflineStatus, translateOffline } from './services/offline';
 import { exportEpub } from './services/epub';
 
@@ -66,8 +66,13 @@ export interface IpcContext {
   refreshLocalizedUi: () => void;
 }
 
-/** 翻译并记录到历史（所有在线路径的唯一事实来源）。 */
-async function translateAndRecord(
+/**
+ * 翻译并记录到历史（所有在线路径的唯一事实来源）。
+ *
+ * 界面路径（`translate` 通道）与全局快捷键路径都调用它，因此「翻译 + 落历史」
+ * 的行为只有一处实现。
+ */
+export async function translateAndRecord(
   req: TranslateRequest,
   onProgress?: (done: number, total: number) => void
 ): Promise<TranslateResult> {
@@ -291,16 +296,7 @@ export function registerIpcHandlers(ctx: IpcContext): void {
     return true;
   });
 
-  // 托盘「检查更新」流程（对话框提示在主进程中完成）。
-  handle('update:check-and-prompt', async (): Promise<UpdateCheckResult> => {
-    const result = await checkForUpdates(ctx.getMainWindow);
-    if (result.available && result.version) {
-      await promptForUpdate(ctx.getMainWindow, result.version, () => {
-        shell.openExternal(RELEASES_URL);
-      });
-    }
-    return result;
-  });
+  // 托盘「检查更新」流程不走 IPC：提示对话框直接在 `main.ts` 里弹出。
 
   // ---- 全局快捷键（A3 部分）----------------------------------------------------
   handle('hotkey:set', (raw) => {
@@ -312,24 +308,18 @@ export function registerIpcHandlers(ctx: IpcContext): void {
   handle('offline:status', () => getOfflineStatus());
 
   /**
-   * v3.0.1：运行时模型下载。`download-model` 是主通道
-   * （接入设置里的复选框 / 下载按钮）；`offline:download` 保留为向后兼容的别名。
-   * 进度由主进程通过 webContents.send('offline:progress') 流向渲染进程
-   * （这是上报下载进度的正确方向）。
+   * v3.0.1：运行时模型下载（接入设置里的复选框 / 下载按钮）。进度由主进程通过
+   * webContents.send('offline:progress') 流向渲染进程——这是上报下载进度的
+   * 正确方向。
    */
-  const startModelDownload = async () => {
+  handle('download-model', async () => {
     const result = await ensureModel();
     if (result.ok) {
-      // `downloaded` 由磁盘上的文件推导得出，因此此处只需持久化用户的
-      // 意愿。
+      // `downloaded` 由磁盘上的文件推导得出，因此此处只需持久化用户的意愿。
       updateSettings({ offlineEnabled: true });
     }
     return getOfflineStatus();
-  };
-
-  handle('download-model', () => startModelDownload());
-
-  handle('offline:download', () => startModelDownload());
+  });
 
   handle('offline:disable', () => {
     updateSettings({ offlineEnabled: false });

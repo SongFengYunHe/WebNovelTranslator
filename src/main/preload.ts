@@ -58,14 +58,12 @@ export interface ElectronApi {
   // 自动更新（A1 部分）
   updateCheck: () => Promise<UpdateCheckResult>;
   updateOpenDownload: () => Promise<boolean>;
-  updateCheckAndPrompt: () => Promise<UpdateCheckResult>;
 
   // 全局快捷键（A3 部分）
   hotkeySet: (accelerator: string) => Promise<{ ok: boolean; reason?: string }>;
 
   // 离线翻译（A4 部分）
   offlineStatus: () => Promise<OfflineStatus>;
-  offlineDownload: () => Promise<OfflineStatus>;
   /** v3.0.1：运行时下载离线模型（从 Hugging Face 拉取）。 */
   downloadModel: () => Promise<OfflineStatus>;
   offlineDisable: () => Promise<OfflineStatus>;
@@ -110,12 +108,10 @@ const api: ElectronApi = {
 
   updateCheck: () => ipcRenderer.invoke('update:check'),
   updateOpenDownload: () => ipcRenderer.invoke('update:open-download'),
-  updateCheckAndPrompt: () => ipcRenderer.invoke('update:check-and-prompt'),
 
   hotkeySet: (accelerator) => ipcRenderer.invoke('hotkey:set', accelerator),
 
   offlineStatus: () => ipcRenderer.invoke('offline:status'),
-  offlineDownload: () => ipcRenderer.invoke('offline:download'),
   downloadModel: () => ipcRenderer.invoke('download-model'),
   offlineDisable: () => ipcRenderer.invoke('offline:disable'),
   offlineTranslate: (req) => ipcRenderer.invoke('offline:translate', req),

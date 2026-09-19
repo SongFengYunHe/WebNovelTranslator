@@ -26,14 +26,12 @@ import {
 import path from 'path';
 import os from 'os';
 import fs from 'fs';
-import { registerIpcHandlers } from './ipc-handlers';
+import { registerIpcHandlers, translateAndRecord } from './ipc-handlers';
 import { mt } from './i18n';
 import log, { logExit } from './logger';
 import { getSettings } from './settings';
-import { getGlossaryById } from './services/glossary';
-import { initDatabase, closeDatabase, insertHistory, deleteHistoryOlderThan } from './services/db';
-import { buildSystemPrompt } from '../shared/prompt-builder';
-import { cancelActiveJobs, translateViaApi } from './translate';
+import { initDatabase, closeDatabase, deleteHistoryOlderThan } from './services/db';
+import { cancelActiveJobs } from './translate';
 import {
   registerHotkey,
   unregisterHotkey,
@@ -402,28 +400,6 @@ function refreshLocalizedUi(): void {
 
 // ---- 全局快捷键接线（A3 部分）---------------------------------------------
 
-function buildHotkeyTranslate(): (req: TranslateRequest) => Promise<TranslateResult> {
-  return async (req: TranslateRequest) => {
-    const settings = getSettings();
-    const glossary = getGlossaryById(settings.activeGlossaryId);
-    const prompt =
-      req.systemPrompt ||
-      buildSystemPrompt(settings.sourceLang, settings.targetLang, glossary, req.text);
-    const result = await translateViaApi(req.text, prompt);
-    if (result.success && result.text) {
-      insertHistory({
-        sourceText: req.text,
-        translatedText: result.text,
-        sourceLang: settings.sourceLang,
-        targetLang: settings.targetLang,
-        glossaryId: settings.activeGlossaryId,
-        chapterTitle: settings.lastChapterTitle || null,
-      });
-    }
-    return result;
-  };
-}
-
 function showHotkeyResult(original: string, translated: string): void {
   const mw = mainWindow;
   if (!mw || mw.isDestroyed()) return;
@@ -442,7 +418,8 @@ function notifyUser(title: string, body: string): void {
 
 function makeHotkeyContext(): HotkeyContext {
   return {
-    translate: buildHotkeyTranslate(),
+    // 与界面路径同一个实现：翻译 + 落历史只有一处。
+    translate: translateAndRecord,
     showResult: showHotkeyResult,
     notify: notifyUser,
   };
@@ -642,6 +619,13 @@ if (!gotLock) {
 // 即使所有窗口都被隐藏，也让应用在托盘中保持存活。
 app.on('window-all-closed', () => {
   // 有意什么都不做：应用驻留在系统托盘中。
+});
+
+// macOS：点击 Dock 图标（或重新启动应用）时唤出面板。窗口通常只是被隐藏到托盘，
+// 因此优先复用；只有在它确实已被销毁时才重建。
+app.on('activate', () => {
+  if (mainWindow && !mainWindow.isDestroyed()) showPanel();
+  else createMainWindow();
 });
 
 // E2 部分：干净退出——结束所有后台进程并记录状态。
