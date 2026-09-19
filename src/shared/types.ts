@@ -65,6 +65,8 @@ export interface AppSettings {
   hotkey: string;
   /** Offline translation (transformers.js) master switch. */
   offlineEnabled: boolean;
+  /** Which engine translation should use. Defaults to `auto`. */
+  translateEngine: TranslateEngine;
   /** Whether the offline model has been downloaded & cached locally. */
   offlineModelDownloaded: boolean;
   /** Last chapter title recorded for history entries / EPUB export. */
@@ -92,6 +94,7 @@ export interface SaveSettingsPatch {
   provider?: ProviderId;
   hotkey?: string;
   offlineEnabled?: boolean;
+  translateEngine?: TranslateEngine;
   offlineModelDownloaded?: boolean;
   lastChapterTitle?: string;
   historyAutoDeleteDays?: number;
@@ -110,6 +113,23 @@ export interface TranslateResult {
   text?: string;
   error?: string;
 }
+
+/** Progress of a chunked translation job (main → renderer event). */
+export interface TranslateProgress {
+  /** Chunks finished so far, including ones served from cache. */
+  done: number;
+  /** Total chunks this job was split into. */
+  total: number;
+}
+
+/**
+ * Which engine a translation should use.
+ *  - `auto`    — online when an API key is configured, otherwise offline;
+ *                falls back to offline if an online attempt fails.
+ *  - `online`  — API only.
+ *  - `offline` — local model only.
+ */
+export type TranslateEngine = 'auto' | 'online' | 'offline';
 
 export interface TestConnectionResult {
   success: boolean;

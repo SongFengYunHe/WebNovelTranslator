@@ -18,9 +18,16 @@ import React, {
   useMemo,
   useState,
 } from 'react';
-import type { Glossary, OfflineStatus, SettingsPublic, SystemHealth } from '../../shared/types';
+import type {
+  Glossary,
+  OfflineStatus,
+  SettingsPublic,
+  SystemHealth,
+  TranslateProgress,
+} from '../../shared/types';
 import type { TranslationKey } from '../i18n';
-import { apiSystemHealth } from '../services/api';
+import { useI18n } from './i18n-context';
+import { apiCancelTranslate, apiSystemHealth } from '../services/api';
 import { buildSystemPrompt } from '../../shared/prompt-builder';
 
 /** Language options; labels are i18n keys rendered through `t()` in the UI. */
@@ -73,11 +80,16 @@ interface AppContextValue {
   translateText: (text: string, sourceLang: string, targetLang: string) => Promise<void>;
   loadTextIntoTranslator: (text: string) => void;
   clearTranslation: () => void;
+  /** Chunk progress for the running job; null when idle or single-chunk. */
+  progress: TranslateProgress | null;
+  /** Abort the running translation job. */
+  cancelTranslation: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
+  const { t } = useI18n();
   const [settings, setSettings] = useState<SettingsPublic | null>(null);
   const [glossaries, setGlossaries] = useState<Glossary[]>([]);
   const [tab, setTab] = useState<TabId>('translate');
@@ -92,6 +104,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [chapterTitle, setChapterTitle] = useState('');
   const [toast, setToast] = useState<Toast | null>(null);
   const [health, setHealth] = useState<SystemHealth | null>(null);
+  /** Chunk progress for the running job; null when idle or single-chunk. */
+  const [progress, setProgress] = useState<TranslateProgress | null>(null);
 
   const refreshSettings = useCallback(async () => {
     try {
@@ -146,12 +160,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       });
       setTab('translate');
     });
-    const offNotify = window.electronAPI.onNotify((t) => setToast(t));
+    const offNotify = window.electronAPI.onNotify((payload) => setToast(payload));
     const offProgress = window.electronAPI.onOfflineProgress((status) => setOfflineStatus(status));
+    const offTranslateProgress = window.electronAPI.onTranslateProgress((p) =>
+      setProgress(p.total > 1 && p.done < p.total ? p : null)
+    );
     return () => {
       offHotkey();
       offNotify();
       offProgress();
+      offTranslateProgress();
     };
   }, []);
 
@@ -169,10 +187,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const translateText = useCallback(
     async (text: string, sourceLang: string, targetLang: string) => {
-      const systemPrompt = buildSystemPrompt(sourceLang, targetLang, activeGlossary);
+      // The glossary is filtered to the terms this passage actually contains, so
+      // a large glossary cannot crowd the chapter out of the prompt.
+      const systemPrompt = buildSystemPrompt(sourceLang, targetLang, activeGlossary, text);
       setTranslation({ originalText: text, translatedText: '', translating: true, error: null });
+      setProgress(null);
 
-      const runOnline = async () => {
+      /** Returns true when the attempt produced a translation. */
+      const runOnline = async (): Promise<boolean> => {
         const result = await window.electronAPI.translate({ text, systemPrompt, chapterTitle });
         if (result.success) {
           setTranslation({
@@ -182,17 +204,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             error: null,
             engine: 'online',
           });
-        } else {
-          setTranslation({
-            originalText: text,
-            translatedText: '',
-            translating: false,
-            error: result.error ?? '未知错误。',
-          });
+          return true;
         }
+        setTranslation({
+          originalText: text,
+          translatedText: '',
+          translating: false,
+          error: result.error ?? '未知错误。',
+        });
+        return false;
       };
 
-      const runOffline = async () => {
+      const runOffline = async (): Promise<boolean> => {
         const result = await window.electronAPI.offlineTranslate({ text, systemPrompt, chapterTitle });
         if (result.success) {
           setTranslation({
@@ -202,24 +225,56 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             error: null,
             engine: 'offline',
           });
-        } else {
-          setTranslation({
-            originalText: text,
-            translatedText: '',
-            translating: false,
-            error: result.error ?? '离线翻译失败。',
-          });
+          return true;
         }
+        setTranslation({
+          originalText: text,
+          translatedText: '',
+          translating: false,
+          error: result.error ?? '离线翻译失败。',
+        });
+        return false;
       };
 
+      const engine = settings?.translateEngine ?? 'auto';
+      const offlineReady = offlineStatus.enabled && offlineStatus.downloaded;
+
       try {
-        // Offline is a backup: use it when it's the only option (no API key)
-        // or when the user explicitly wants it and has no key.
-        if (offlineStatus.enabled && offlineStatus.downloaded && !settings?.hasApiKey) {
+        if (engine === 'offline') {
+          if (!offlineReady) {
+            // Guard here rather than calling through: the main process would
+            // start a ~600MB model download as a side effect of translating.
+            setTranslation({
+              originalText: text,
+              translatedText: '',
+              translating: false,
+              error: t('engine.offlineUnavailable'),
+            });
+            return;
+          }
           await runOffline();
-        } else {
-          await runOnline();
+          return;
         }
+
+        if (engine === 'online') {
+          await runOnline();
+          return;
+        }
+
+        // auto: online first when a key exists, otherwise offline; one fallback
+        // so a transient API failure still yields a result.
+        if (settings?.hasApiKey) {
+          const onlineOk = await runOnline();
+          if (onlineOk || !offlineReady) return;
+          await runOffline();
+          return;
+        }
+        if (offlineReady) {
+          await runOffline();
+          return;
+        }
+        // Nothing configured yet — let the online path report the missing key.
+        await runOnline();
       } catch (err) {
         setTranslation({
           originalText: text,
@@ -227,9 +282,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           translating: false,
           error: String(err),
         });
+      } finally {
+        setProgress(null);
       }
     },
-    [activeGlossary, chapterTitle, offlineStatus.enabled, offlineStatus.downloaded, settings?.hasApiKey]
+    [
+      activeGlossary,
+      chapterTitle,
+      offlineStatus.enabled,
+      offlineStatus.downloaded,
+      settings?.hasApiKey,
+      settings?.translateEngine,
+      t,
+    ]
   );
 
   const loadTextIntoTranslator = useCallback((text: string) => {
@@ -239,6 +304,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const clearTranslation = useCallback(() => {
     setTranslation(EMPTY_TRANSLATION);
+    setProgress(null);
+  }, []);
+
+  /** Abort the running job. Completed chunks stay cached, so retrying is cheap. */
+  const cancelTranslation = useCallback(async () => {
+    await apiCancelTranslate();
   }, []);
 
   const value = useMemo<AppContextValue>(
@@ -260,6 +331,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       translateText,
       loadTextIntoTranslator,
       clearTranslation,
+      progress,
+      cancelTranslation,
     }),
     [
       settings,
@@ -277,6 +350,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       translateText,
       loadTextIntoTranslator,
       clearTranslation,
+      progress,
+      cancelTranslation,
     ]
   );
 

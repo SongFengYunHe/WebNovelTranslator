@@ -23,6 +23,11 @@ export function apiTranslate(req: TranslateRequest): Promise<TranslateResult> {
   return window.electronAPI.translate(req);
 }
 
+/** Cancels the in-flight chunked translation job. */
+export function apiCancelTranslate(): Promise<boolean> {
+  return window.electronAPI.cancelTranslate();
+}
+
 export function apiTestConnection(): Promise<TestConnectionResult> {
   return window.electronAPI.testConnection();
 }

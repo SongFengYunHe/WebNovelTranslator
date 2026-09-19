@@ -17,6 +17,7 @@ import type {
   SystemHealth,
   TestConnectionResult,
   TranslateRequest,
+  TranslateProgress,
   TranslateResult,
   UpdateCheckResult,
 } from '../shared/types';
@@ -36,6 +37,8 @@ export interface ElectronApi {
 
   // Translation
   translate: (req: TranslateRequest) => Promise<TranslateResult>;
+  /** Cancels the in-flight chunked translation job. */
+  cancelTranslate: () => Promise<boolean>;
 
   // Glossary
   glossaryList: () => Promise<Glossary[]>;
@@ -76,6 +79,8 @@ export interface ElectronApi {
   onHotkeyResult: (cb: (payload: { original: string; translated: string }) => void) => () => void;
   onOfflineProgress: (cb: (status: OfflineStatus) => void) => () => void;
   onNotify: (cb: (payload: { title: string; body: string }) => void) => () => void;
+  /** Chunk progress for a long, chunked translation job. */
+  onTranslateProgress: (cb: (progress: TranslateProgress) => void) => () => void;
 }
 
 const api: ElectronApi = {
@@ -89,6 +94,7 @@ const api: ElectronApi = {
   systemHealth: () => ipcRenderer.invoke('system:health'),
 
   translate: (req) => ipcRenderer.invoke('translate', req),
+  cancelTranslate: () => ipcRenderer.invoke('translate:cancel'),
 
   glossaryList: () => ipcRenderer.invoke('glossary:list'),
   glossaryCreate: (name) => ipcRenderer.invoke('glossary:create', name),
@@ -133,6 +139,11 @@ const api: ElectronApi = {
       cb(payload);
     ipcRenderer.on('app:notify', listener);
     return () => ipcRenderer.removeListener('app:notify', listener);
+  },
+  onTranslateProgress: (cb) => {
+    const listener = (_e: Electron.IpcRendererEvent, progress: TranslateProgress) => cb(progress);
+    ipcRenderer.on('translate:progress', listener);
+    return () => ipcRenderer.removeListener('translate:progress', listener);
   },
 };
 

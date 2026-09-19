@@ -26,7 +26,18 @@ export const en = {
     'Paste the novel text here, or extract it from a URL in the Browser tab…',
   'translate.button': 'Translate',
   'translate.translating': 'Translating…',
+  'translate.progress': 'Translating… {done}/{total} sections',
+  'translate.cancel': 'Cancel',
   'translate.clear': 'Clear',
+
+  'engine.label': 'Engine',
+  'engine.hint':
+    'Which translation engine to use. Auto falls back to offline when the API request fails.',
+  'engine.auto': 'Auto',
+  'engine.online': 'Online (API)',
+  'engine.offline': 'Offline (local model)',
+  'engine.offlineUnavailable':
+    'Offline translation is not ready — enable it in Settings and let the model finish downloading.',
   'translate.chapterTitle': 'Chapter title (optional)',
   'translate.epubExport': 'Export EPUB',
   'translate.epubExporting': 'Exporting…',

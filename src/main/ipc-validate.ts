@@ -109,6 +109,7 @@ function nullable<T>(value: unknown, field: string, check: (v: unknown) => T): T
 
 const providers = ['custom', 'deepseek', 'kimi'] as const;
 const uiLanguages = ['en', 'zh'] as const;
+const translateEngines = ['auto', 'online', 'offline'] as const;
 
 /**
  * Validate a settings patch. Unknown keys are ignored (the store only reads the
@@ -170,6 +171,11 @@ export function validateSaveSettingsPatch(raw: unknown): SaveSettingsPatch {
     requireBoolean(v, 'offlineEnabled')
   );
   if (offlineEnabled !== undefined) patch.offlineEnabled = offlineEnabled;
+
+  const translateEngine = optional(o.translateEngine, 'translateEngine', (v) =>
+    requireOneOf(v, 'translateEngine', translateEngines)
+  );
+  if (translateEngine !== undefined) patch.translateEngine = translateEngine;
 
   const offlineModelDownloaded = optional(o.offlineModelDownloaded, 'offlineModelDownloaded', (v) =>
     requireBoolean(v, 'offlineModelDownloaded')

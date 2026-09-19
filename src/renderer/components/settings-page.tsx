@@ -37,7 +37,7 @@ export default function SettingsPage() {
   const [provider, setProvider] = useState<ProviderId>('custom');
   const [baseUrl, setBaseUrl] = useState('https://api.openai.com/v1');
   const [model, setModel] = useState('gpt-4o');
-  const [temperature, setTemperature] = useState('0.7');
+  const [temperature, setTemperature] = useState('0.3');
   const [maxTokens, setMaxTokens] = useState('4096');
   // 历史记录自动清理：保留天数（0 = 关闭）。
   const [autoDeleteDays, setAutoDeleteDays] = useState('90');
@@ -89,7 +89,7 @@ export default function SettingsPage() {
         provider,
         baseUrl: baseUrl.trim() || 'https://api.openai.com/v1',
         model: model.trim() || 'gpt-4o',
-        temperature: Number.isFinite(Number(temperature)) ? Number(temperature) : 0.7,
+        temperature: Number.isFinite(Number(temperature)) ? Number(temperature) : 0.3,
         maxTokens: Math.max(1, Math.round(Number(maxTokens)) || 4096),
         historyAutoDeleteDays: Math.max(0, Math.round(Number(autoDeleteDays)) || 0),
         ...(apiKey.trim() ? { apiKey: apiKey.trim() } : {}),

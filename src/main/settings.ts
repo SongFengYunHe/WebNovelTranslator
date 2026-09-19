@@ -13,6 +13,7 @@ import type {
   ProviderId,
   SaveSettingsPatch,
   SettingsPublic,
+  TranslateEngine,
 } from '../shared/types';
 import { DEFAULT_HOTKEY } from '../shared/types';
 import { readApiKey, writeApiKey } from './secret';
@@ -33,7 +34,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   apiKey: '',
   baseUrl: 'https://api.openai.com/v1',
   model: 'gpt-4o',
-  temperature: 0.7,
+  // 0.3 rather than 0.7: translation wants fidelity, not creative variation.
+  temperature: 0.3,
   maxTokens: 4096,
   sourceLang: 'zh',
   targetLang: 'en',
@@ -46,6 +48,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   hotkey: DEFAULT_HOTKEY,
   // Part A4: offline translation.
   offlineEnabled: false,
+  // Which engine to translate with; `auto` keeps the previous behaviour.
+  translateEngine: 'auto',
   offlineModelDownloaded: false,
   // Part A2/A5: last chapter title.
   lastChapterTitle: '',
@@ -107,6 +111,9 @@ export function normalizeBaseUrl(url: string): string {
 const isProvider = (v: unknown): v is ProviderId =>
   v === 'custom' || v === 'deepseek' || v === 'kimi';
 
+const isTranslateEngine = (v: unknown): v is TranslateEngine =>
+  v === 'auto' || v === 'online' || v === 'offline';
+
 /**
  * Apply a partial patch and persist. Backward compatible: only known fields are
  * written, and the API key is only ever replaced by a non-empty string.
@@ -129,6 +136,7 @@ export function updateSettings(patch: SaveSettingsPatch): SettingsPublic {
   if (isProvider(patch.provider)) next.provider = patch.provider;
   if (typeof patch.hotkey === 'string' && patch.hotkey.trim()) next.hotkey = patch.hotkey.trim();
   if (typeof patch.offlineEnabled === 'boolean') next.offlineEnabled = patch.offlineEnabled;
+  if (isTranslateEngine(patch.translateEngine)) next.translateEngine = patch.translateEngine;
   if (typeof patch.offlineModelDownloaded === 'boolean') {
     next.offlineModelDownloaded = patch.offlineModelDownloaded;
   }

@@ -12,6 +12,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { useApp, LANGUAGES } from '../contexts/app-context';
 import { useI18n } from '../contexts/i18n-context';
 import { apiGlossarySetActive } from '../services/api';
+import type { TranslateEngine } from '../../shared/types';
 
 export default function TranslationPanel() {
   const {
@@ -24,6 +25,8 @@ export default function TranslationPanel() {
     clearTranslation,
     chapterTitle,
     setChapterTitle,
+    progress,
+    cancelTranslation,
   } = useApp();
   const { t } = useI18n();
   const [sourceLang, setSourceLang] = useState(settings?.sourceLang ?? 'zh');
@@ -143,10 +146,33 @@ export default function TranslationPanel() {
           </span>
         )}
 
+        {/* Which engine to use. Previously this was decided silently, and the
+            "enable offline" toggle was ignored whenever an API key existed. */}
+        <label className="pair" title={t('engine.hint')}>
+          <span className="pair-label">⚙ {t('engine.label')}</span>
+          <select
+            value={settings?.translateEngine ?? 'auto'}
+            onChange={(e) => {
+              void window.electronAPI
+                .saveSettings({ translateEngine: e.target.value as TranslateEngine })
+                .then(() => refreshSettings());
+            }}
+          >
+            <option value="auto">{t('engine.auto')}</option>
+            <option value="online">{t('engine.online')}</option>
+            <option value="offline">{t('engine.offline')}</option>
+          </select>
+        </label>
+
         <button className="btn primary" onClick={handleTranslate} disabled={translation.translating}>
           {translation.translating ? t('translate.translating') : t('translate.button')}
         </button>
-        {(translation.originalText || translation.translatedText) && (
+        {translation.translating && (
+          <button className="btn ghost" onClick={() => void cancelTranslation()}>
+            {t('translate.cancel')}
+          </button>
+        )}
+        {!translation.translating && (translation.originalText || translation.translatedText) && (
           <button className="btn ghost" onClick={clearTranslation}>
             {t('translate.clear')}
           </button>
@@ -170,7 +196,13 @@ export default function TranslationPanel() {
         />
       </div>
 
-      {translation.translating && <div className="spinner-row">{t('translate.translating')}</div>}
+      {translation.translating && (
+        <div className="spinner-row">
+          {progress
+            ? t('translate.progress', { done: progress.done, total: progress.total })
+            : t('translate.translating')}
+        </div>
+      )}
 
       {translation.translatedText && (
         <div className="result-area">

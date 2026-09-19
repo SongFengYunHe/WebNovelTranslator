@@ -19,6 +19,7 @@ import type {
 } from '../shared/types';
 import log from './logger';
 import { RELEASES_URL } from '../shared/constants';
+import { friendlyApiError, friendlyNetworkError } from '../shared/api-errors';
 import { getSettings, normalizeBaseUrl, toPublic, updateSettings } from './settings';
 import { IpcValidationError } from './ipc-validate';
 import {
@@ -51,7 +52,7 @@ import {
   insertHistory,
   queryHistory,
 } from './services/db';
-import { translateViaApi } from './translate';
+import { cancelActiveJobs, translateViaApi } from './translate';
 import { checkForUpdates, promptForUpdate } from './services/update';
 import { ensureModel, getOfflineStatus, translateOffline } from './services/offline';
 import { exportEpub } from './services/epub';
@@ -65,9 +66,12 @@ export interface IpcContext {
 }
 
 /** Translate + record to history (single source of truth for every online path). */
-async function translateAndRecord(req: TranslateRequest): Promise<TranslateResult> {
+async function translateAndRecord(
+  req: TranslateRequest,
+  onProgress?: (done: number, total: number) => void
+): Promise<TranslateResult> {
   const settings = getSettings();
-  const result = await translateViaApi(req.text, req.systemPrompt, { chapterTitle: req.chapterTitle });
+  const result = await translateViaApi(req.text, req.systemPrompt, { onProgress });
   if (result.success && result.text) {
     insertHistory({
       sourceText: req.text,
@@ -131,23 +135,40 @@ export function registerIpcHandlers(ctx: IpcContext): void {
     if (!settings.apiKey) {
       return { success: false, message: '尚未配置 API 密钥。' };
     }
+    // Probe with a real (tiny) completion instead of GET /models: plenty of
+    // OpenAI-compatible endpoints — Azure, Ollama proxies, assorted gateways —
+    // do not implement /models and would report a false failure.
     const base = normalizeBaseUrl(settings.baseUrl);
     const started = Date.now();
     try {
-      const res = await fetch(`${base}/models`, {
-        headers: { Authorization: `Bearer ${settings.apiKey}` },
+      const res = await fetch(`${base}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${settings.apiKey}`,
+        },
+        body: JSON.stringify({
+          model: settings.model,
+          messages: [{ role: 'user', content: 'ping' }],
+          max_tokens: 1,
+          temperature: 0,
+        }),
         signal: AbortSignal.timeout(30_000),
       });
       const latencyMs = Date.now() - started;
       if (res.ok) {
-        return { success: true, message: `连接成功（HTTP ${res.status}）。`, latencyMs };
+        return {
+          success: true,
+          message: `连接成功（HTTP ${res.status}，模型 ${settings.model}）。`,
+          latencyMs,
+        };
       }
       const body = await res.text().catch(() => '');
-      return { success: false, message: `HTTP ${res.status}: ${body.slice(0, 400)}`, latencyMs };
+      return { success: false, message: friendlyApiError(res.status, body), latencyMs };
     } catch (err) {
       return {
         success: false,
-        message: `连接失败：${(err as Error).message}`,
+        message: friendlyNetworkError((err as Error).message),
         latencyMs: Date.now() - started,
       };
     }
@@ -159,7 +180,20 @@ export function registerIpcHandlers(ctx: IpcContext): void {
   handle('system:health', () => ({ database: getDatabaseStatus() }));
 
   // ---- Translation -------------------------------------------------------------
-  handle('translate', (raw) => translateAndRecord(validateTranslateRequest(raw)));
+  handle('translate', (raw) =>
+    translateAndRecord(validateTranslateRequest(raw), (done, total) => {
+      const mw = ctx.getMainWindow();
+      if (mw && !mw.isDestroyed()) mw.webContents.send('translate:progress', { done, total });
+    })
+  );
+
+  // Cancels every in-flight chunk request for the current job. Chunks that
+  // already completed stay cached, so retrying afterwards only re-requests the
+  // ones that were actually interrupted.
+  handle('translate:cancel', () => {
+    cancelActiveJobs();
+    return true;
+  });
 
   // ---- Glossary CRUD -------------------------------------------------------------
   handle('glossary:list', () => loadGlossaries());

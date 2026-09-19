@@ -36,7 +36,7 @@ import { getSettings } from './settings';
 import { getGlossaryById } from './services/glossary';
 import { initDatabase, closeDatabase, insertHistory, deleteHistoryOlderThan } from './services/db';
 import { buildSystemPrompt } from '../shared/prompt-builder';
-import { translateViaApi, abortAllRequests } from './translate';
+import { cancelActiveJobs, translateViaApi } from './translate';
 import {
   registerHotkey,
   unregisterHotkey,
@@ -371,7 +371,7 @@ function buildHotkeyTranslate(): (req: TranslateRequest) => Promise<TranslateRes
     const glossary = getGlossaryById(settings.activeGlossaryId);
     const prompt =
       req.systemPrompt ||
-      buildSystemPrompt(settings.sourceLang, settings.targetLang, glossary);
+      buildSystemPrompt(settings.sourceLang, settings.targetLang, glossary, req.text);
     const result = await translateViaApi(req.text, prompt);
     if (result.success && result.text) {
       insertHistory({
@@ -504,7 +504,7 @@ function cleanupOnQuit(): void {
 
   // 3) 中止所有在途网络请求（翻译请求等）。
   try {
-    abortAllRequests();
+    cancelActiveJobs();
   } catch (err) {
     log.warn('[exit] error aborting requests:', (err as Error).message);
   }

@@ -74,19 +74,42 @@ Formatting
 Now, translate the following text:`;
 
 /**
+ * Narrow a glossary down to the entries whose source term actually occurs in
+ * `text`.
+ *
+ * The whole active glossary is injected into the prompt, so a large one
+ * (hundreds of cultivation terms, character names, place names) can crowd out
+ * the chapter itself. Filtering to the terms present in the passage keeps the
+ * prompt small and the model's attention on the text.
+ */
+export function filterGlossaryToText(glossary: Glossary | null, text: string): Glossary | null {
+  if (!glossary) return null;
+  const entries = glossary.entries.filter((e) => {
+    const source = e.source?.trim();
+    return Boolean(source) && text.includes(source);
+  });
+  return { ...glossary, entries };
+}
+
+/**
  * Build the full system prompt for the given language pair and glossary.
+ *
+ * `text` is the passage about to be translated — the glossary is filtered to
+ * the terms it actually contains before being injected.
  */
 export function buildSystemPrompt(
   sourceLang: string,
   targetLang: string,
-  glossary: Glossary | null
+  glossary: Glossary | null,
+  text: string
 ): string {
   const src = LANG_LABELS[sourceLang] ?? sourceLang;
   const tgt = LANG_LABELS[targetLang] ?? targetLang;
 
+  const matched = filterGlossaryToText(glossary, text);
   const glossaryText =
-    glossary && glossary.entries.length
-      ? glossary.entries.map((e) => `${e.source} -> ${e.target}`).join('\n')
+    matched && matched.entries.length
+      ? matched.entries.map((e) => `${e.source} -> ${e.target}`).join('\n')
       : '(none provided)';
 
   const rules = LANGUAGE_RULES[`${sourceLang}→${targetLang}`] ?? GENERIC_RULES;
@@ -100,19 +123,66 @@ export function buildSystemPrompt(
     .replace('{languageSpecificRules}', () => rules);
 }
 
+/** CJK code-point ranges, used to reason about adjacency without a tokenizer. */
+const CJK_CHAR = /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/;
+const CJK_RANGES = '\\u3040-\\u30ff\\u3400-\\u4dbf\\u4e00-\\u9fff\\uf900-\\ufaff';
+
+/** Zero-width marker used to park a replacement so it cannot be re-matched. */
+const MARK = '\u0000';
+
+function escapeRegExp(literal: string): string {
+  return literal.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 /**
- * Apply a glossary to already-translated text via simple case-sensitive string
- * replacement (used by offline translation, which has no glossary-awareness).
+ * Build the match pattern for one glossary source term.
+ *
+ * A single CJK character is the dangerous case: as a bare substring it matches
+ * inside any longer word, so the entry 王 -> Wang would corrupt 王国 into
+ * Wang国. Requiring a non-CJK character on both sides confines such a term to
+ * stand-alone occurrences. Longer terms are specific enough to match directly.
+ */
+function termPattern(source: string): string {
+  const escaped = escapeRegExp(source);
+  if (source.length === 1 && CJK_CHAR.test(source)) {
+    return `(?<![${CJK_RANGES}])${escaped}(?![${CJK_RANGES}])`;
+  }
+  return escaped;
+}
+
+/**
+ * Apply a glossary to already-translated text.
+ *
+ * Used by offline translation, where the NLLB model has no glossary awareness
+ * and post-processing is the only option. Three rules keep it safe:
+ *
+ *  1. Longer source terms run first, so 魔法师 wins over 魔法.
+ *  2. Each replacement is parked behind a placeholder, so text produced by an
+ *     earlier rule can never be re-matched by a later one (A->B plus B->C used
+ *     to cascade).
+ *  3. Single-character CJK terms must stand alone (see `termPattern`).
+ *
+ * Replacements are applied with a callback, so a target containing `$&` or `$$`
+ * is inserted literally.
  */
 export function applyGlossaryToText(text: string, glossary: Glossary | null): string {
   if (!glossary || !glossary.entries.length) return text;
+
+  const entries = glossary.entries
+    .map((e) => ({ source: e.source?.trim() ?? '', target: e.target?.trim() ?? '' }))
+    .filter((e) => e.source && e.target && text.includes(e.source))
+    .sort((a, b) => b.source.length - a.source.length);
+
+  if (!entries.length) return text;
+
+  const targets: string[] = [];
   let out = text;
-  for (const entry of glossary.entries) {
-    const source = entry.source?.trim();
-    const target = entry.target?.trim();
-    if (source && target && out.includes(source)) {
-      out = out.split(source).join(target);
-    }
+  for (const entry of entries) {
+    out = out.replace(new RegExp(termPattern(entry.source), 'g'), () => {
+      targets.push(entry.target);
+      return `${MARK}${targets.length - 1}${MARK}`;
+    });
   }
-  return out;
+
+  return out.replace(new RegExp(`${MARK}(\\d+)${MARK}`, 'g'), (_m, i: string) => targets[Number(i)] ?? '');
 }
