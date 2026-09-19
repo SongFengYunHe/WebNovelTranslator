@@ -22,6 +22,7 @@ import {
   shell,
   dialog,
   globalShortcut,
+  nativeTheme,
 } from 'electron';
 import path from 'path';
 import os from 'os';
@@ -182,7 +183,9 @@ function createMainWindow(): void {
     frame: false,
     title: mt('main.appName'),
     icon: path.join(__dirname, '../../resources/icon.png'),
-    backgroundColor: '#f5f6fa',
+    // 窗口底色跟随系统深浅色：否则暗色环境下加载完成前会闪一块浅色
+    //（与 styles.css 的 --bg 保持一致）。
+    backgroundColor: nativeTheme.shouldUseDarkColors ? '#14171f' : '#f5f6fa',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
