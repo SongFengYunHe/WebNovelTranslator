@@ -14,6 +14,7 @@ import type {
   OfflineStatus,
   SaveSettingsPatch,
   SettingsPublic,
+  SystemHealth,
   TestConnectionResult,
   TranslateRequest,
   TranslateResult,
@@ -29,6 +30,9 @@ export interface ElectronApi {
   getSettings: () => Promise<SettingsPublic>;
   saveSettings: (patch: SaveSettingsPatch) => Promise<SettingsPublic>;
   testConnection: () => Promise<TestConnectionResult>;
+
+  // Application health
+  systemHealth: () => Promise<SystemHealth>;
 
   // Translation
   translate: (req: TranslateRequest) => Promise<TranslateResult>;
@@ -81,6 +85,8 @@ const api: ElectronApi = {
   getSettings: () => ipcRenderer.invoke('settings:get'),
   saveSettings: (patch) => ipcRenderer.invoke('settings:set', patch),
   testConnection: () => ipcRenderer.invoke('settings:test-connection'),
+
+  systemHealth: () => ipcRenderer.invoke('system:health'),
 
   translate: (req) => ipcRenderer.invoke('translate', req),
 

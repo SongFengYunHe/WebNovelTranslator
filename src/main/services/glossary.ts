@@ -7,6 +7,7 @@
  * 术语表会在翻译提示词中按 source -> target 注入，提升人名/专有名词翻译一致性。
  */
 import { app } from 'electron';
+import { randomUUID } from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import type { Glossary, GlossaryEntry } from '../../shared/types';
@@ -30,12 +31,30 @@ export function loadGlossaries(): Glossary[] {
 }
 
 export function saveGlossaries(list: Glossary[]): void {
+  const p = glossariesFile();
+  const tmp = `${p}.tmp`;
   try {
-    const p = glossariesFile();
     fs.mkdirSync(path.dirname(p), { recursive: true });
-    fs.writeFileSync(p, JSON.stringify(list, null, 2), 'utf-8');
+    const json = JSON.stringify(list, null, 2);
+    // Write to a temp file, flush it, then rename over the target. rename() is
+    // atomic on the same filesystem, so a crash mid-write can never leave a
+    // truncated glossaries.json — a reader sees either the previous complete
+    // file or the new one. This is the user's only copy of their terminology.
+    const fd = fs.openSync(tmp, 'w');
+    try {
+      fs.writeFileSync(fd, json, 'utf-8');
+      fs.fsyncSync(fd);
+    } finally {
+      fs.closeSync(fd);
+    }
+    fs.renameSync(tmp, p);
   } catch (err) {
     log.error('[glossary] failed to save glossaries:', err);
+    try {
+      fs.rmSync(tmp, { force: true });
+    } catch {
+      /* ignore — the temp file is best-effort cleanup */
+    }
   }
 }
 
@@ -44,16 +63,11 @@ export function getGlossaryById(id: string | null | undefined): Glossary | null 
   return loadGlossaries().find((g) => g.id === id) ?? null;
 }
 
-// 生成短随机 ID（时间戳 36 进制 + 随机片段），足够避免碰撞。
-export function genId(): string {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-}
-
 // ---- CRUD (used by the IPC handlers) ---------------------------------------
 
 export function createGlossary(name: string): Glossary {
   const glossary: Glossary = {
-    id: genId(),
+    id: randomUUID(),
     name: name?.trim() || 'New Glossary',
     entries: [],
   };

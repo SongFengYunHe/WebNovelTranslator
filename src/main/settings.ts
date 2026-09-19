@@ -15,8 +15,18 @@ import type {
   SettingsPublic,
 } from '../shared/types';
 import { DEFAULT_HOTKEY } from '../shared/types';
+import { readApiKey, writeApiKey } from './secret';
+import log from './logger';
 
-/** Key derivation seed for electron-store's built-in AES-256-GCM encryption. */
+/**
+ * electron-store's built-in AES-256-GCM seed.
+ *
+ * This is NOT a secret — it is committed to the repository, so it only
+ * obfuscates `settings.json`; it does not protect anything from someone who has
+ * the file. It is retained solely so the existing on-disk format keeps working.
+ * The one genuinely sensitive field, the API key, is stored separately under
+ * OS-level encryption (see `./secret.ts`).
+ */
 const ENCRYPTION_KEY = 'web-novel-translator-v1-secret-key';
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -49,8 +59,40 @@ const settingsStore = new Store<{ settings: AppSettings }>({
   defaults: { settings: DEFAULT_SETTINGS },
 });
 
-export function getSettings(): AppSettings {
+/** Read settings.json and fold in defaults. */
+function readStoredSettings(): AppSettings {
   return { ...DEFAULT_SETTINGS, ...settingsStore.get('settings') };
+}
+
+/**
+ * One-shot migration: v3.0.1 and earlier persisted the API key inside
+ * `settings.json`. Move it into OS-protected storage and blank the field so the
+ * file no longer carries the key.
+ *
+ * Idempotent — the guard short-circuits on every run after the first, and a
+ * failure keeps the legacy value in place rather than losing the key.
+ */
+function migrateLegacyApiKey(stored: AppSettings): AppSettings {
+  if (!stored.apiKey) return stored;
+  try {
+    writeApiKey(stored.apiKey);
+    const next: AppSettings = { ...stored, apiKey: '' };
+    settingsStore.set('settings', next);
+    log.info('[settings] migrated the API key out of settings.json into OS-protected storage');
+    return next;
+  } catch (err) {
+    log.error('[settings] API key migration failed — keeping the legacy value:', err);
+    return stored;
+  }
+}
+
+export function getSettings(): AppSettings {
+  const stored = migrateLegacyApiKey(readStoredSettings());
+  // The secret store is authoritative once it holds a key. If it is empty while
+  // the legacy field still has a value, migration must have failed — keep using
+  // the legacy key rather than dropping it.
+  const secret = readApiKey();
+  return { ...stored, apiKey: secret || stored.apiKey };
 }
 
 export function toPublic(s: AppSettings): SettingsPublic {
@@ -95,11 +137,18 @@ export function updateSettings(patch: SaveSettingsPatch): SettingsPublic {
   if (typeof patch.historyAutoDeleteDays === 'number' && patch.historyAutoDeleteDays >= 0) {
     next.historyAutoDeleteDays = Math.floor(patch.historyAutoDeleteDays);
   }
-  // Never overwrite the stored key with an empty string. Only a non-empty
-  // value replaces it.
+  // The key itself goes to OS-protected storage. Only a non-empty value
+  // replaces the existing key, so leaving the field blank keeps it. A genuine
+  // write failure throws, letting the renderer tell the user it was not saved.
   if (typeof patch.apiKey === 'string' && patch.apiKey.trim() !== '') {
-    next.apiKey = patch.apiKey.trim();
+    writeApiKey(patch.apiKey);
   }
-  settingsStore.set('settings', next);
-  return toPublic(next);
+
+  // settings.json must never carry the key — but blank the legacy field only
+  // once the secret store is known to hold it, so a failed migration cannot
+  // lose a key the user already had.
+  const secret = readApiKey();
+  settingsStore.set('settings', { ...next, apiKey: secret ? '' : next.apiKey });
+
+  return toPublic({ ...next, apiKey: secret || next.apiKey });
 }

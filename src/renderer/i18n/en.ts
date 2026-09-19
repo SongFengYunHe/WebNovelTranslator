@@ -12,6 +12,9 @@ export const en = {
   'app.minimize': 'Minimize (keeps the Taskbar entry)',
   'app.closeWindow': 'Close window',
 
+  'health.dbUnavailable':
+    'Translation history is unavailable — translations still work, but they will not be saved. See the log for details.',
+
   'langs.zh': 'Chinese',
   'langs.en': 'English',
   'langs.ja': 'Japanese',
@@ -119,6 +122,7 @@ export const en = {
   'settings.maxTokens': 'Max tokens',
   'settings.save': 'Save settings',
   'settings.saved': '✓ Saved',
+  'settings.saveFailed': 'Could not save — please try again (see the log for details).',
   'settings.test': 'Test connection',
   'settings.testing': 'Testing…',
   'settings.howToTitle': 'How to get an API key',

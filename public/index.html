@@ -2,9 +2,19 @@
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
+    <!--
+      Renderer policy. Notes:
+      - style-src keeps 'unsafe-inline' because React writes inline `style`
+        attributes (the offline-download progress bar); removing it breaks that.
+      - frame-src is https:-only: the Browser tab's <webview> is the only frame,
+        and non-HTTPS attach is refused in the main process as well.
+      - frame-ancestors / sandbox are intentionally absent — those directives are
+        ignored when delivered via <meta>, so claiming them would imply
+        protection that is not actually applied.
+    -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self' file: data:; script-src 'self' file:; style-src 'self' file: 'unsafe-inline'; img-src 'self' file: data:; frame-src http: https:; connect-src 'self' file:"
+      content="default-src 'self' file: data:; script-src 'self' file:; style-src 'self' file: 'unsafe-inline'; img-src 'self' file: data:; font-src 'self' file:; connect-src 'self' file:; frame-src https:; object-src 'none'; base-uri 'none'; form-action 'none'"
     />
     <title>网文翻译器</title>
     <link rel="stylesheet" href="../dist/renderer/renderer.css" />

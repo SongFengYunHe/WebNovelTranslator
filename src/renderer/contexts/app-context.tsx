@@ -18,8 +18,9 @@ import React, {
   useMemo,
   useState,
 } from 'react';
-import type { Glossary, OfflineStatus, SettingsPublic } from '../../shared/types';
+import type { Glossary, OfflineStatus, SettingsPublic, SystemHealth } from '../../shared/types';
 import type { TranslationKey } from '../i18n';
+import { apiSystemHealth } from '../services/api';
 import { buildSystemPrompt } from '../../shared/prompt-builder';
 
 /** Language options; labels are i18n keys rendered through `t()` in the UI. */
@@ -61,6 +62,8 @@ interface AppContextValue {
   setTab: (t: TabId) => void;
   translation: TranslationState;
   offlineStatus: OfflineStatus;
+  /** Main-process subsystem health; null until the first probe resolves. */
+  health: SystemHealth | null;
   chapterTitle: string;
   setChapterTitle: (title: string) => void;
   toast: Toast | null;
@@ -88,6 +91,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   });
   const [chapterTitle, setChapterTitle] = useState('');
   const [toast, setToast] = useState<Toast | null>(null);
+  const [health, setHealth] = useState<SystemHealth | null>(null);
 
   const refreshSettings = useCallback(async () => {
     try {
@@ -113,9 +117,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const refreshHealth = useCallback(async () => {
+    try {
+      setHealth(await apiSystemHealth());
+    } catch {
+      /* ignore — health stays null, so no banner is shown */
+    }
+  }, []);
+
   useEffect(() => {
-    void Promise.all([refreshSettings(), refreshGlossaries(), refreshOfflineStatus()]);
-  }, [refreshSettings, refreshGlossaries, refreshOfflineStatus]);
+    void Promise.all([
+      refreshSettings(),
+      refreshGlossaries(),
+      refreshOfflineStatus(),
+      refreshHealth(),
+    ]);
+  }, [refreshSettings, refreshGlossaries, refreshOfflineStatus, refreshHealth]);
 
   // Main-process → renderer events.
   useEffect(() => {
@@ -233,6 +250,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setTab,
       translation,
       offlineStatus,
+      health,
       chapterTitle,
       setChapterTitle,
       toast,
@@ -250,6 +268,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       tab,
       translation,
       offlineStatus,
+      health,
       chapterTitle,
       toast,
       refreshSettings,

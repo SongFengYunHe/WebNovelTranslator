@@ -189,3 +189,27 @@ export interface EpubRequest {
   chapters: EpubChapter[];
   defaultTitle: string;
 }
+
+// ---- Application health -----------------------------------------------------
+
+/**
+ * Health of a main-process subsystem.
+ *
+ * Subsystems degrade rather than crash (a broken SQLite file must not stop the
+ * app from starting), but a silent downgrade is confusing — the UI reads this
+ * so it can say so explicitly instead of showing empty lists forever.
+ */
+export interface SubsystemHealth {
+  ok: boolean;
+  /** Failure reason, or null when healthy. */
+  error: string | null;
+}
+
+/** Health of the SQLite history database, plus its location for diagnostics. */
+export interface DatabaseHealth extends SubsystemHealth {
+  path: string;
+}
+
+export interface SystemHealth {
+  database: DatabaseHealth;
+}

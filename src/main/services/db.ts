@@ -13,10 +13,14 @@ import Database from 'better-sqlite3';
 import { app } from 'electron';
 import fs from 'fs';
 import path from 'path';
-import type { HistoryEntry, HistoryPage, HistoryQuery } from '../../shared/types';
+import type { DatabaseHealth, HistoryEntry, HistoryPage, HistoryQuery } from '../../shared/types';
 import log from '../logger';
 
 let db: Database.Database | null = null;
+/** Set once initialisation has failed, so every later call does not retry it. */
+let initFailed = false;
+/** Human-readable reason for the last initialisation failure; null while healthy. */
+let lastError: string | null = null;
 
 function dataDir(): string {
   return path.join(app.getPath('userData'), 'translator-data');
@@ -31,7 +35,7 @@ function dbPath(): string {
  * Also guarantees the `translator-data` directory exists (Part E7).
  */
 export function initDatabase(): void {
-  if (db) return;
+  if (db || initFailed) return;
   try {
     fs.mkdirSync(dataDir(), { recursive: true });
     const file = dbPath();
@@ -51,11 +55,25 @@ export function initDatabase(): void {
       CREATE INDEX IF NOT EXISTS idx_history_timestamp ON history(timestamp DESC);
       CREATE INDEX IF NOT EXISTS idx_history_chapter ON history(chapter_title);
     `);
+    lastError = null;
     log.info(`[db] history database ready at ${file}`);
   } catch (err) {
-    log.error('[db] failed to initialize database:', err);
+    // Record the reason instead of only logging it: history silently degrading
+    // into a no-op is confusing, so the UI reads this via getDatabaseStatus().
+    initFailed = true;
+    lastError = (err as Error).message;
     db = null;
+    log.error('[db] failed to initialize database:', err);
   }
+}
+
+/**
+ * Current health. Triggers a lazy open first so the very first call reflects
+ * reality rather than an untried connection.
+ */
+export function getDatabaseStatus(): DatabaseHealth {
+  getDb();
+  return { ok: db !== null, error: lastError, path: dbPath() };
 }
 
 /** Drop-in safe accessor; returns null when the DB failed to open. */

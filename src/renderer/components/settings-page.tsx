@@ -44,6 +44,7 @@ export default function SettingsPage() {
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; msg: string; ms?: number } | null>(null);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState(false);
 
   const [hotkey, setHotkey] = useState('Ctrl+Shift+Z');
   const [hotkeyCapture, setHotkeyCapture] = useState(false);
@@ -79,15 +80,25 @@ export default function SettingsPage() {
   }, []);
 
   const save = useCallback(async () => {
-    await apiSaveSettings({
-      provider,
-      baseUrl: baseUrl.trim() || 'https://api.openai.com/v1',
-      model: model.trim() || 'gpt-4o',
-      temperature: Number.isFinite(Number(temperature)) ? Number(temperature) : 0.7,
-      maxTokens: Math.max(1, Math.round(Number(maxTokens)) || 4096),
-      historyAutoDeleteDays: Math.max(0, Math.round(Number(autoDeleteDays)) || 0),
-      ...(apiKey.trim() ? { apiKey: apiKey.trim() } : {}),
-    });
+    setSaveError(false);
+    try {
+      // The API key is written to OS-protected storage in the main process and
+      // can fail (e.g. safeStorage unavailable + disk error). Surface that
+      // instead of silently pretending the key was saved.
+      await apiSaveSettings({
+        provider,
+        baseUrl: baseUrl.trim() || 'https://api.openai.com/v1',
+        model: model.trim() || 'gpt-4o',
+        temperature: Number.isFinite(Number(temperature)) ? Number(temperature) : 0.7,
+        maxTokens: Math.max(1, Math.round(Number(maxTokens)) || 4096),
+        historyAutoDeleteDays: Math.max(0, Math.round(Number(autoDeleteDays)) || 0),
+        ...(apiKey.trim() ? { apiKey: apiKey.trim() } : {}),
+      });
+    } catch {
+      setSaveError(true);
+      setTimeout(() => setSaveError(false), 5000);
+      return;
+    }
     setApiKey('');
     await refreshSettings();
     setSaved(true);
@@ -372,6 +383,7 @@ export default function SettingsPage() {
           window (flex-shrink: 0, white background, top border). They never
           scroll away with the content. */}
       <div className="settings-actions">
+        {saveError && <div className="inline-error">⚠ {t('settings.saveFailed')}</div>}
         <button className="btn primary" onClick={() => void save()}>
           {saved ? t('settings.saved') : t('settings.save')}
         </button>

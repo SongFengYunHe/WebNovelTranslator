@@ -14,6 +14,9 @@ export const zh: Record<TranslationKey, string> = {
   'app.minimize': '最小化（保留在任务栏）',
   'app.closeWindow': '关闭窗口',
 
+  'health.dbUnavailable':
+    '翻译历史不可用——翻译功能仍可正常使用，但结果不会被保存。详情请查看日志。',
+
   'langs.zh': '中文',
   'langs.en': '英语',
   'langs.ja': '日语',
@@ -116,6 +119,7 @@ export const zh: Record<TranslationKey, string> = {
   'settings.maxTokens': '最大 Token 数',
   'settings.save': '保存设置',
   'settings.saved': '✓ 已保存',
+  'settings.saveFailed': '保存失败，请重试（详情见日志）。',
   'settings.test': '测试连接',
   'settings.testing': '测试中…',
   'settings.howToTitle': '如何获取 API 密钥',

@@ -2,17 +2,16 @@
  * All IPC handlers. File system access, encrypted settings storage, SQLite
  * history, EPUB export, the update check and the OpenAI-compatible HTTP calls
  * all live here, in the main process.
+ *
+ * Every payload is validated before it reaches an implementation (see
+ * `./ipc-validate`). The renderer is sandboxed, but it hosts arbitrary page
+ * content in the Browser tab, so these channels are a real trust boundary.
  */
 import { dialog, ipcMain, shell, type BrowserWindow } from 'electron';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import type {
-  EpubRequest,
-  GlossaryEntry,
-  HistoryExport,
-  HistoryQuery,
-  SaveSettingsPatch,
   TestConnectionResult,
   TranslateRequest,
   TranslateResult,
@@ -21,6 +20,21 @@ import type {
 import log from './logger';
 import { RELEASES_URL } from '../shared/constants';
 import { getSettings, normalizeBaseUrl, toPublic, updateSettings } from './settings';
+import { IpcValidationError } from './ipc-validate';
+import {
+  validateActiveGlossaryId,
+  validateEpubRequest,
+  validateGlossaryEntries,
+  validateGlossaryId,
+  validateGlossaryName,
+  validateHistoryExport,
+  validateHistoryId,
+  validateHistoryQuery,
+  validateHotkey,
+  validateRetentionDays,
+  validateSaveSettingsPatch,
+  validateTranslateRequest,
+} from './ipc-validate';
 import {
   createGlossary,
   deleteGlossary,
@@ -33,6 +47,7 @@ import {
   clearHistory,
   deleteHistory,
   deleteHistoryOlderThan,
+  getDatabaseStatus,
   insertHistory,
   queryHistory,
 } from './services/db';
@@ -66,9 +81,30 @@ async function translateAndRecord(req: TranslateRequest): Promise<TranslateResul
   return result;
 }
 
+/**
+ * Register an IPC handler with uniform validation-error handling.
+ *
+ * Each handler validates its own payload, so the implementation body only ever
+ * sees a typed value. A rejected payload is logged once here and rethrown,
+ * which surfaces as a rejected promise in the renderer instead of a silent
+ * no-op that looks like success.
+ */
+function handle(channel: string, fn: (...args: unknown[]) => unknown): void {
+  ipcMain.handle(channel, async (_event, ...args: unknown[]) => {
+    try {
+      return await fn(...args);
+    } catch (err) {
+      if (err instanceof IpcValidationError) {
+        log.warn(`[ipc] ${channel} rejected an invalid payload: ${err.message}`);
+      }
+      throw err;
+    }
+  });
+}
+
 export function registerIpcHandlers(ctx: IpcContext): void {
   // ---- Popup window control ---------------------------------------------------
-  ipcMain.handle('panel:close', () => {
+  handle('panel:close', () => {
     const mw = ctx.getMainWindow();
     if (mw && !mw.isDestroyed()) mw.hide();
     return true;
@@ -76,7 +112,7 @@ export function registerIpcHandlers(ctx: IpcContext): void {
 
   // v3.0.1: native minimize — the window stays on the Taskbar (tray keeps
   // running). No hide()/preventDefault() involved.
-  ipcMain.handle('panel:minimize', () => {
+  handle('panel:minimize', () => {
     const mw = ctx.getMainWindow();
     if (mw && !mw.isDestroyed()) {
       mw.setSkipTaskbar(false);
@@ -86,11 +122,11 @@ export function registerIpcHandlers(ctx: IpcContext): void {
   });
 
   // ---- Settings ---------------------------------------------------------------
-  ipcMain.handle('settings:get', () => toPublic(getSettings()));
+  handle('settings:get', () => toPublic(getSettings()));
 
-  ipcMain.handle('settings:set', (_e, patch: SaveSettingsPatch) => updateSettings(patch));
+  handle('settings:set', (raw) => updateSettings(validateSaveSettingsPatch(raw)));
 
-  ipcMain.handle('settings:test-connection', async (): Promise<TestConnectionResult> => {
+  handle('settings:test-connection', async (): Promise<TestConnectionResult> => {
     const settings = getSettings();
     if (!settings.apiKey) {
       return { success: false, message: '尚未配置 API 密钥。' };
@@ -117,19 +153,25 @@ export function registerIpcHandlers(ctx: IpcContext): void {
     }
   });
 
+  // ---- Health ------------------------------------------------------------------
+  // Surfaced to the UI so a failed SQLite initialisation is visible instead of
+  // silently degrading every history feature into a no-op.
+  handle('system:health', () => ({ database: getDatabaseStatus() }));
+
   // ---- Translation -------------------------------------------------------------
-  ipcMain.handle('translate', (_e, req: TranslateRequest): Promise<TranslateResult> =>
-    translateAndRecord(req)
-  );
+  handle('translate', (raw) => translateAndRecord(validateTranslateRequest(raw)));
 
   // ---- Glossary CRUD -------------------------------------------------------------
-  ipcMain.handle('glossary:list', () => loadGlossaries());
+  handle('glossary:list', () => loadGlossaries());
 
-  ipcMain.handle('glossary:create', (_e, name: string) => createGlossary(name));
+  handle('glossary:create', (rawName) => createGlossary(validateGlossaryName(rawName)));
 
-  ipcMain.handle('glossary:rename', (_e, id: string, name: string) => renameGlossary(id, name));
+  handle('glossary:rename', (rawId, rawName) =>
+    renameGlossary(validateGlossaryId(rawId), validateGlossaryName(rawName))
+  );
 
-  ipcMain.handle('glossary:delete', (_e, id: string) => {
+  handle('glossary:delete', (rawId) => {
+    const id = validateGlossaryId(rawId);
     const list = deleteGlossary(id);
     if (getSettings().activeGlossaryId === id) {
       updateSettings({ activeGlossaryId: null });
@@ -137,27 +179,26 @@ export function registerIpcHandlers(ctx: IpcContext): void {
     return list;
   });
 
-  ipcMain.handle('glossary:update-entries', (_e, id: string, entries: GlossaryEntry[]) =>
-    updateGlossaryEntries(id, entries)
+  handle('glossary:update-entries', (rawId, rawEntries) =>
+    updateGlossaryEntries(validateGlossaryId(rawId), validateGlossaryEntries(rawEntries))
   );
 
-  ipcMain.handle('glossary:set-active', (_e, id: string | null) =>
-    updateSettings({ activeGlossaryId: id })
+  handle('glossary:set-active', (rawId) =>
+    updateSettings({ activeGlossaryId: validateActiveGlossaryId(rawId) })
   );
 
   // ---- Translation history (Part A2) -------------------------------------------
-  ipcMain.handle('history:list', (_e, query: HistoryQuery) => queryHistory(query));
+  handle('history:list', (raw) => queryHistory(validateHistoryQuery(raw)));
 
-  ipcMain.handle('history:delete', (_e, id: number) => deleteHistory(id));
+  handle('history:delete', (raw) => deleteHistory(validateHistoryId(raw)));
 
-  ipcMain.handle('history:clear', () => clearHistory());
+  handle('history:clear', () => clearHistory());
 
   // 清除指定天数之前的历史记录（历史记录体积管理）。
-  ipcMain.handle('history:clear-older', (_e, days: number) =>
-    deleteHistoryOlderThan(days)
-  );
+  handle('history:clear-older', (raw) => deleteHistoryOlderThan(validateRetentionDays(raw)));
 
-  ipcMain.handle('history:export', async (_e, req: HistoryExport) => {
+  handle('history:export', async (raw) => {
+    const req = validateHistoryExport(raw);
     const rows = allHistory();
     if (!rows.length) {
       return { ok: false, error: '没有可导出的记录。' };
@@ -201,15 +242,15 @@ export function registerIpcHandlers(ctx: IpcContext): void {
   });
 
   // ---- Auto-update (Part A1) -----------------------------------------------------
-  ipcMain.handle('update:check', (): Promise<UpdateCheckResult> => checkForUpdates(ctx.getMainWindow));
+  handle('update:check', (): Promise<UpdateCheckResult> => checkForUpdates(ctx.getMainWindow));
 
-  ipcMain.handle('update:open-download', () => {
+  handle('update:open-download', () => {
     shell.openExternal(RELEASES_URL);
     return true;
   });
 
   // Tray "Check for Updates" flow (dialog prompt in the main process).
-  ipcMain.handle('update:check-and-prompt', async (): Promise<UpdateCheckResult> => {
+  handle('update:check-and-prompt', async (): Promise<UpdateCheckResult> => {
     const result = await checkForUpdates(ctx.getMainWindow);
     if (result.available && result.version) {
       await promptForUpdate(ctx.getMainWindow, result.version, () => {
@@ -220,13 +261,13 @@ export function registerIpcHandlers(ctx: IpcContext): void {
   });
 
   // ---- Global hotkey (Part A3) -----------------------------------------------------
-  ipcMain.handle('hotkey:set', (_e, accelerator: string) => {
-    updateSettings({ hotkey: accelerator });
+  handle('hotkey:set', (raw) => {
+    updateSettings({ hotkey: validateHotkey(raw) });
     return ctx.reloadHotkey();
   });
 
   // ---- Offline translation (Part A4) ------------------------------------------------
-  ipcMain.handle('offline:status', () => getOfflineStatus());
+  handle('offline:status', () => getOfflineStatus());
 
   /**
    * v3.0.1: runtime model download. `download-model` is the primary channel
@@ -244,22 +285,23 @@ export function registerIpcHandlers(ctx: IpcContext): void {
     return getOfflineStatus();
   };
 
-  ipcMain.handle('download-model', () => startModelDownload());
+  handle('download-model', () => startModelDownload());
 
-  ipcMain.handle('offline:download', () => startModelDownload());
+  handle('offline:download', () => startModelDownload());
 
-  ipcMain.handle('offline:disable', () => {
+  handle('offline:disable', () => {
     updateSettings({ offlineEnabled: false });
     // disposeOfflineModel is called lazily by translateOffline's guard; keep the
     // cached pipeline so re-enabling without a re-download still works.
     return getOfflineStatus();
   });
 
-  ipcMain.handle('offline:translate', async (_e, req: TranslateRequest) => {
+  handle('offline:translate', (raw) => {
+    const req = validateTranslateRequest(raw);
     const settings = getSettings();
     return translateOffline(req.text, settings.sourceLang, settings.targetLang, settings.activeGlossaryId);
   });
 
   // ---- EPUB export (Part A5) --------------------------------------------------------
-  ipcMain.handle('epub:export', (_e, req: EpubRequest) => exportEpub(ctx.getMainWindow, req));
+  handle('epub:export', (raw) => exportEpub(ctx.getMainWindow, validateEpubRequest(raw)));
 }

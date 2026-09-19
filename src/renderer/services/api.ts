@@ -12,6 +12,7 @@ import type {
   OfflineStatus,
   SaveSettingsPatch,
   SettingsPublic,
+  SystemHealth,
   TestConnectionResult,
   TranslateRequest,
   TranslateResult,
@@ -28,6 +29,11 @@ export function apiTestConnection(): Promise<TestConnectionResult> {
 
 export function apiGetSettings(): Promise<SettingsPublic> {
   return window.electronAPI.getSettings();
+}
+
+/** Main-process subsystem health (currently the SQLite history database). */
+export function apiSystemHealth(): Promise<SystemHealth> {
+  return window.electronAPI.systemHealth();
 }
 
 export function apiSaveSettings(patch: SaveSettingsPatch): Promise<SettingsPublic> {

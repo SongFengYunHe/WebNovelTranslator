@@ -1006,6 +1006,14 @@ code {
   padding-bottom: 76px;
 }
 
+/* P1: subsystem health banner, pinned between the header and the scrolling
+   body. `.error-banner` supplies the colours; this only adds the outer spacing
+   the scroll container would otherwise provide. */
+.health-banner {
+  margin: 12px 16px 0;
+  flex-shrink: 0;
+}
+
 /* v3.0.1: on the Settings tab the page manages its own scrolling (scrollable
    middle + fixed footer), so the body becomes a flush, non-scrolling flex
    container and the panel stretches to cover the entire window content area. */

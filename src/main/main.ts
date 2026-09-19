@@ -248,6 +248,23 @@ function createMainWindow(): void {
     return { action: 'deny' };
   });
 
+  // Harden every <webview> the Browser tab attaches. The `webpreferences`
+  // attribute on the tag is supplied by the renderer, so it cannot be trusted —
+  // force the safe values here and refuse non-HTTPS targets outright.
+  mainWindow.webContents.on('will-attach-webview', (event, webPreferences, params) => {
+    delete webPreferences.preload;
+    webPreferences.nodeIntegration = false;
+    webPreferences.contextIsolation = true;
+    webPreferences.sandbox = true;
+
+    const src = params?.src ?? '';
+    // `about:blank` is the initial state before the user enters a URL.
+    if (src !== 'about:blank' && !/^https:\/\//i.test(src)) {
+      log.warn(`[webview] blocked attach to a non-HTTPS URL: ${src}`);
+      event.preventDefault();
+    }
+  });
+
   // Optional automated smoke test (used by `npm run smoke`).
   // The `--smoke-test` flag is the cross-platform path: `SMOKE_TEST=1 electron .`
   // only works where the shell supports inline env vars, but npm runs scripts
@@ -256,8 +273,17 @@ function createMainWindow(): void {
   if (isSmokeTest) {
     mainWindow.webContents.once('did-finish-load', async () => {
       try {
+        // Also round-trips one real IPC call (system:health) so the smoke test
+        // exercises the preload bridge end to end, not just that React mounted.
         const info = await mainWindow!.webContents.executeJavaScript(
-          `JSON.stringify({ rootChildren: document.getElementById('root')?.children.length ?? -1, hasElectronAPI: typeof window.electronAPI === 'object' })`
+          `(async () => {
+             const health = await window.electronAPI.systemHealth();
+             return JSON.stringify({
+               rootChildren: document.getElementById('root')?.children.length ?? -1,
+               hasElectronAPI: typeof window.electronAPI === 'object',
+               dbOk: health?.database?.ok ?? null
+             });
+           })()`
         );
         // 冒烟测试结果写入 stdout（供 CI 解析），不使用 console.log。
         process.stdout.write('SMOKE_TEST_RESULT ' + info + '\n');

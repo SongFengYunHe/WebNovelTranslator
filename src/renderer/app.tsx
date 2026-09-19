@@ -19,7 +19,7 @@ const TABS: { id: TabId; labelKey: TranslationKey }[] = [
 ];
 
 export default function App() {
-  const { tab, setTab, toast, settings, offlineStatus } = useApp();
+  const { tab, setTab, toast, settings, offlineStatus, health } = useApp();
   const { t } = useI18n();
 
   // 让窗口标题跟随当前界面语言（HTML <title> 会覆盖主进程设置的标题）。
@@ -31,6 +31,10 @@ export default function App() {
   // 配置了 API 密钥或开启离线模式后永久隐藏，避免遮挡主内容。
   const showOnboarding =
     settings && !settings.hasApiKey && !offlineStatus.enabled;
+
+  // Part P1: the history database degrades to a no-op instead of crashing the
+  // app. Say so explicitly rather than showing an empty history list forever.
+  const dbUnavailable = health !== null && !health.database.ok;
 
   return (
     <div className="app">
@@ -67,6 +71,12 @@ export default function App() {
           ✕
         </button>
       </header>
+
+      {dbUnavailable && (
+        <div className="error-banner health-banner">
+          ⚠ {t('health.dbUnavailable')}
+        </div>
+      )}
 
       <main
         className={`app-body${tab === 'settings' ? ' is-settings' : ''}${
