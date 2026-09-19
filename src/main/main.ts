@@ -54,9 +54,8 @@ import {
   setOfflineProgressListener,
 } from './services/offline';
 import { getMainWindowBounds, saveMainWindowBounds } from './state';
+import { RELEASES_URL } from '../shared/constants';
 import type { TranslateRequest, TranslateResult } from '../shared/types';
-
-const RELEASE_URL = 'https://github.com/0000110000/floating_translator/releases';
 
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
@@ -250,7 +249,11 @@ function createMainWindow(): void {
   });
 
   // Optional automated smoke test (used by `npm run smoke`).
-  if (process.env.SMOKE_TEST === '1') {
+  // The `--smoke-test` flag is the cross-platform path: `SMOKE_TEST=1 electron .`
+  // only works where the shell supports inline env vars, but npm runs scripts
+  // through cmd.exe on Windows, so that form silently failed there.
+  const isSmokeTest = process.env.SMOKE_TEST === '1' || process.argv.includes('--smoke-test');
+  if (isSmokeTest) {
     mainWindow.webContents.once('did-finish-load', async () => {
       try {
         const info = await mainWindow!.webContents.executeJavaScript(
@@ -302,7 +305,7 @@ function createTray(): void {
             const result = await checkForUpdates(() => mainWindow);
             if (result.available && result.version) {
               await promptForUpdate(() => mainWindow, result.version, () =>
-                shell.openExternal(RELEASE_URL)
+                shell.openExternal(RELEASES_URL)
               );
             } else {
               const win = mainWindow;
@@ -407,7 +410,7 @@ function checkForUpdatesOnStartup(): void {
         const result = await checkForUpdates(() => mainWindow);
         if (result.available && result.version) {
           await promptForUpdate(() => mainWindow, result.version, () =>
-            shell.openExternal(RELEASE_URL)
+            shell.openExternal(RELEASES_URL)
           );
         }
       })();

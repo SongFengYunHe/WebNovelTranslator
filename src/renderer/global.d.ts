@@ -1,67 +1,16 @@
 /**
  * Ambient type declarations for the renderer.
- *  - `window.electronAPI` typed API exposed by the preload script.
+ *
+ *  - `window.electronAPI` is typed by the `ElectronApi` interface exported from
+ *    the preload script itself, so the bridge has exactly ONE definition and
+ *    cannot drift from the implementation.
  *  - The `<webview>` custom element used by BrowserView.
  */
-import type {
-  EpubRequest,
-  Glossary,
-  GlossaryEntry,
-  HistoryExport,
-  HistoryPage,
-  HistoryQuery,
-  OfflineStatus,
-  SaveSettingsPatch,
-  SettingsPublic,
-  TestConnectionResult,
-  TranslateRequest,
-  TranslateResult,
-  UpdateCheckResult,
-} from '../shared/types';
+import type { ElectronApi } from '../main/preload';
 
 declare global {
   interface Window {
-    electronAPI: {
-      panelClose: () => Promise<boolean>;
-      panelMinimize: () => Promise<boolean>;
-
-      getSettings: () => Promise<SettingsPublic>;
-      saveSettings: (patch: SaveSettingsPatch) => Promise<SettingsPublic>;
-      testConnection: () => Promise<TestConnectionResult>;
-
-      translate: (req: TranslateRequest) => Promise<TranslateResult>;
-
-      glossaryList: () => Promise<Glossary[]>;
-      glossaryCreate: (name: string) => Promise<Glossary>;
-      glossaryRename: (id: string, name: string) => Promise<Glossary[]>;
-      glossaryDelete: (id: string) => Promise<Glossary[]>;
-      glossaryUpdateEntries: (id: string, entries: GlossaryEntry[]) => Promise<Glossary[]>;
-      glossarySetActive: (id: string | null) => Promise<SettingsPublic>;
-
-      historyList: (query: HistoryQuery) => Promise<HistoryPage>;
-      historyDelete: (id: number) => Promise<boolean>;
-      historyClear: () => Promise<boolean>;
-      historyClearOlder: (days: number) => Promise<number>;
-      historyExport: (kind: HistoryExport) => Promise<{ ok: boolean; filePath?: string; count?: number; error?: string }>;
-
-      updateCheck: () => Promise<UpdateCheckResult>;
-      updateOpenDownload: () => Promise<boolean>;
-      updateCheckAndPrompt: () => Promise<UpdateCheckResult>;
-
-      hotkeySet: (accelerator: string) => Promise<{ ok: boolean; reason?: string }>;
-
-      offlineStatus: () => Promise<OfflineStatus>;
-      offlineDownload: () => Promise<OfflineStatus>;
-      downloadModel: () => Promise<OfflineStatus>;
-      offlineDisable: () => Promise<OfflineStatus>;
-      offlineTranslate: (req: TranslateRequest) => Promise<TranslateResult>;
-
-      epubExport: (req: EpubRequest) => Promise<{ ok: boolean; filePath?: string; error?: string }>;
-
-      onHotkeyResult: (cb: (payload: { original: string; translated: string }) => void) => () => void;
-      onOfflineProgress: (cb: (status: OfflineStatus) => void) => () => void;
-      onNotify: (cb: (payload: { title: string; body: string }) => void) => () => void;
-    };
+    electronAPI: ElectronApi;
   }
 
   /**

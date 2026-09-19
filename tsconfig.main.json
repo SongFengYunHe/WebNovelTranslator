@@ -13,5 +13,6 @@
     "sourceMap": false,
     "types": ["node"]
   },
-  "include": ["src/main/**/*", "src/shared/**/*", "src/types/**/*"]
+  "include": ["src/main/**/*", "src/shared/**/*", "src/types/**/*"],
+  "exclude": ["**/*.test.ts", "**/__tests__/**"]
 }

@@ -38,8 +38,23 @@ jobs:
           npm_config_runtime: electron
           npm_config_target: "30.5.1"
 
-      - name: Build main process + renderer
+      # Runs first so a logic regression fails the pipeline in seconds.
+      # These tests cover dependency-free modules in src/shared only — they
+      # never load better-sqlite3, which npm ci above built for the Electron
+      # ABI and which therefore cannot be required from plain Node.
+      - name: Unit tests
+        run: npm test
+
+      - name: Build main process + renderer (includes tsc typecheck)
         run: npm run build
+
+      # Boots the real app, asserts React mounted and the preload bridge is
+      # exposed, then exits with code 0. Uses the `--smoke-test` flag rather
+      # than an inline `SMOKE_TEST=1` env var, which npm cannot express through
+      # cmd.exe on Windows.
+      - name: Smoke test (app boots)
+        run: npm run smoke:run
+        timeout-minutes: 5
 
       # Signing is fully disabled (see the env above + electron-builder.config.js).
       # The app icon + version metadata are applied by the afterPack hook with the

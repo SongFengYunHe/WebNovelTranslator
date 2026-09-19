@@ -19,6 +19,7 @@ import type {
   UpdateCheckResult,
 } from '../shared/types';
 import log from './logger';
+import { RELEASES_URL } from '../shared/constants';
 import { getSettings, normalizeBaseUrl, toPublic, updateSettings } from './settings';
 import {
   createGlossary,
@@ -203,7 +204,7 @@ export function registerIpcHandlers(ctx: IpcContext): void {
   ipcMain.handle('update:check', (): Promise<UpdateCheckResult> => checkForUpdates(ctx.getMainWindow));
 
   ipcMain.handle('update:open-download', () => {
-    shell.openExternal('https://github.com/0000110000/floating_translator/releases');
+    shell.openExternal(RELEASES_URL);
     return true;
   });
 
@@ -212,7 +213,7 @@ export function registerIpcHandlers(ctx: IpcContext): void {
     const result = await checkForUpdates(ctx.getMainWindow);
     if (result.available && result.version) {
       await promptForUpdate(ctx.getMainWindow, result.version, () => {
-        shell.openExternal('https://github.com/0000110000/floating_translator/releases');
+        shell.openExternal(RELEASES_URL);
       });
     }
     return result;

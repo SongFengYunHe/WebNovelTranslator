@@ -27,7 +27,7 @@
 
 ## 📥 安装
 
-1. 从 [Releases 页面](https://github.com/0000110000/floating_translator/releases) 下载最新版：
+1. 从 [Releases 页面](https://github.com/SongFengYunHe/WebNovelTranslator/releases) 下载最新版：
    - `WebNovelTranslator-Setup-<版本号>.exe` —— 安装版（推荐，可自定义安装目录、创建桌面快捷方式）
    - `WebNovelTranslator-<版本号>-portable.exe` —— 免安装便携版
 2. 双击运行。若出现 SmartScreen 提示，点击 **更多信息 → 仍要运行**。
@@ -124,7 +124,7 @@ npm run dist
 
 Key features: system-tray + global-hotkey interaction (Ctrl+Shift+Z) that opens a stable frameless popup window, glossary as a first-class feature (switch the active glossary right from the translate toolbar), built-in chapter extractor, SQLite translation history (search / export CSV·JSON), EPUB export, optional offline translation via `transformers.js` (NLLB-200), presets for DeepSeek / Kimi (Moonshot), auto-update check, Chinese (default) / English UI, window-state persistence, and clean exit with no lingering processes.
 
-- **Install**: download the `.exe` from the [Releases](https://github.com/0000110000/floating_translator/releases) page.
+- **Install**: download the `.exe` from the [Releases](https://github.com/SongFengYunHe/WebNovelTranslator/releases) page.
 - **Unsigned-app note**: SmartScreen may warn; click **More info → Run anyway**.
 - **Offline mode**: only bundled in dev builds (`npm start`) to keep the installer under 80 MB; the ~600 MB model is always downloaded on demand.
 - **Build**: `npm install && npm start` / `npm run dist`.

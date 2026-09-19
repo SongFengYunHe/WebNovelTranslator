@@ -30,6 +30,16 @@
  *   - `electronLanguages: ['en-US', 'zh-CN']` — drops ~37 MB of unused
  *     Chromium locale packs (55 files) from the packaged app.
  */
+// Release/update URLs are derived from the `repository` field in package.json
+// so they can never drift from src/shared/constants.ts. This is a CommonJS
+// build file and cannot import that TypeScript module, so package.json acts as
+// the shared source of truth.
+const pkg = require('./package.json');
+const REPO_URL = (
+  typeof pkg.repository === 'string' ? pkg.repository : pkg.repository.url
+).replace(/\.git$/, '');
+const UPDATE_FEED_URL = `${REPO_URL}/releases/latest/download/`;
+
 module.exports = {
   appId: 'com.webnoveltranslator.app',
   productName: 'WebNovelTranslator',
@@ -68,7 +78,7 @@ module.exports = {
   // here so a generic provider check can find it on the download page.
   publish: {
     provider: 'generic',
-    url: 'https://github.com/0000110000/floating_translator/releases/latest/download/',
+    url: UPDATE_FEED_URL,
   },
 
   // Native `.node` binaries are smart-unpacked automatically; be explicit so

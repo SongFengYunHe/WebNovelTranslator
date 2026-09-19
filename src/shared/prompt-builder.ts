@@ -91,10 +91,13 @@ export function buildSystemPrompt(
 
   const rules = LANGUAGE_RULES[`${sourceLang}→${targetLang}`] ?? GENERIC_RULES;
 
-  return SYSTEM_PROMPT_TEMPLATE.replace('{sourceLang}', src)
-    .replace('{targetLang}', tgt)
-    .replace('{glossary}', glossaryText)
-    .replace('{languageSpecificRules}', rules);
+  // Every replacement uses a function so `$&` / `$$` / `$'` inside the injected
+  // text are treated as literals. With a plain string replacement, a glossary
+  // term containing `$$` (or any `$`-pattern) would be silently mangled.
+  return SYSTEM_PROMPT_TEMPLATE.replace('{sourceLang}', () => src)
+    .replace('{targetLang}', () => tgt)
+    .replace('{glossary}', () => glossaryText)
+    .replace('{languageSpecificRules}', () => rules);
 }
 
 /**

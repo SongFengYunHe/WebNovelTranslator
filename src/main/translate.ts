@@ -3,6 +3,7 @@
  * handler, the global-hotkey path and the offline engine.
  */
 import type { TranslateResult } from '../shared/types';
+import { friendlyApiError, friendlyNetworkError } from '../shared/api-errors';
 import log from './logger';
 import { getSettings, normalizeBaseUrl } from './settings';
 
@@ -53,38 +54,6 @@ export async function callChatApi(body: unknown): Promise<ChatApiResponse> {
   }
 }
 
-/** 从服务商返回体中提取 error.message（兼容 DeepSeek/Kimi 等 OpenAI 兼容格式）。 */
-function extractServerMessage(body: string): string {
-  try {
-    const parsed = JSON.parse(body);
-    const msg = parsed?.error?.message ?? parsed?.message ?? '';
-    return typeof msg === 'string' ? msg.trim() : '';
-  } catch {
-    return '';
-  }
-}
-
-/**
- * Turn a non-OK API response into a friendly, user-facing error message
- * (Part E3). Detects network failures, quota/rate-limit (429) and auth (401).
- * 401/403 会专门提醒用户检查 API 密钥；解析失败时给出通用提示。
- */
-export function friendlyApiError(status: number, body: string): string {
-  const serverMsg = extractServerMessage(body);
-  if (status === 401 || status === 403) {
-    return 'API密钥无效或无权访问，请检查设置中的密钥。';
-  }
-  if (status === 429) {
-    return serverMsg || 'API额度不足或请求过于频繁，请更换密钥或稍后重试。';
-  }
-  if (status >= 500) {
-    return serverMsg || '服务端暂时不可用，请稍后重试。';
-  }
-  if (serverMsg) return `请求失败（HTTP ${status}）：${serverMsg}`;
-  // 解析失败或未知错误：给出通用提示，避免暴露晦涩的原始报文。
-  return '请求失败，请检查API设置或稍后重试。';
-}
-
 /**
  * Translate `text` using the currently saved settings. `systemPrompt` is
  * composed by the caller (UI / hotkey / offline all use the same builder).
@@ -117,13 +86,8 @@ export async function translateViaApi(
     }
     return { success: true, text: content };
   } catch (err) {
-    const msg = (err as Error).message;
-    // AbortSignal.timeout / fetch network failure
-    const friendly =
-      /network|fetch failed|abort|ENOTFOUND|ECONNREFUSED|ETIMEDOUT/i.test(msg)
-        ? '网络连接失败，请检查设置或稍后重试。'
-        : `请求失败：${msg}`;
     log.error('[translate] request failed:', err);
-    return { success: false, error: friendly };
+    // AbortSignal.timeout / fetch network failure
+    return { success: false, error: friendlyNetworkError((err as Error).message) };
   }
 }

@@ -8,15 +8,14 @@
  */
 import { autoUpdater } from 'electron-updater';
 import { app, dialog, type BrowserWindow } from 'electron';
+import { UPDATE_FEED_URL } from '../../shared/constants';
+import { isNewerVersion } from '../../shared/version';
 import type { UpdateCheckResult } from '../../shared/types';
 import log from '../logger';
 
-// Placeholder: point this at the real release feed (e.g. a GitHub Releases
-// URL) before shipping a public build. Without a reachable feed the check
-// simply reports no update / a logged warning.
-const UPDATE_FEED_URL = 'https://github.com/0000110000/floating_translator/releases/latest/download/';
-
-// 占位地址保护：尚未配置真实更新源的版本静默跳过检查，仅写日志，不打扰用户。
+// The feed URL is derived from the canonical repository in `shared/constants.ts`
+// so a fork can never end up pointing at the upstream project's releases.
+// 占位地址保护：尚未配置真实更新源时静默跳过检查，仅写日志，不打扰用户。
 const isPlaceholderFeed = /example\.com|placeholder|localhost|127\.0\.0\.1/i.test(
   UPDATE_FEED_URL
 );
@@ -67,7 +66,7 @@ export async function checkForUpdates(
     const info = result.updateInfo;
     const latest = info.version;
     const current = app.getVersion();
-    const available = compareVersions(latest, current) > 0;
+    const available = isNewerVersion(latest, current);
     checking = false;
     return { available, version: latest };
   } catch (err) {
@@ -96,15 +95,4 @@ export async function promptForUpdate(
     ? await dialog.showMessageBox(win, opts)
     : await dialog.showMessageBox(opts);
   if (response === 0) onOpenDownload();
-}
-
-function compareVersions(a: string, b: string): number {
-  const pa = a.split('.').map((x) => parseInt(x, 10) || 0);
-  const pb = b.split('.').map((x) => parseInt(x, 10) || 0);
-  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
-    const da = pa[i] ?? 0;
-    const db = pb[i] ?? 0;
-    if (da !== db) return da - db;
-  }
-  return 0;
 }
