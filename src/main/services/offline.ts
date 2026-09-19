@@ -1,27 +1,23 @@
 /**
- * Optional offline translation backup (Part A4) via transformers.js.
+ * 基于 transformers.js 的可选离线翻译后备方案（A4 部分）。
  *
- * Model: `Xenova/nllb-200-distilled-600M` (multilingual, ~870 MB quantized).
+ * 模型：`Xenova/nllb-200-distilled-600M`（多语言，量化后约 870 MB）。
  *
- * The model is fetched at runtime from Hugging Face with plain Node `fetch` —
- * the installer never ships it. Files stream into
- * `<userData>/models/<model-id>/`, with byte-level progress pushed to the
- * renderer through the `offline:progress` event. Already-complete files are
- * skipped, so a half-finished download resumes instead of restarting.
+ * 模型在运行时用原生 Node `fetch` 从 Hugging Face 拉取——安装包从不附带它。文件
+ * 流式写入 `<userData>/models/<model-id>/`，字节级进度通过 `offline:progress` 事件
+ * 推送到渲染进程。已完成的文件会被跳过，因此下载到一半中断后是续传而非重来。
  *
- * THREE things that were broken before and are load-bearing here:
+ * 曾有三处问题被修复，且是这里的承重结构：
  *
- *  1. The weights live under `onnx/`, so the completeness check must look at
- *     each required repo-relative path — not scan the model directory root for
- *     a `*.onnx` entry (the root entry is the *directory* `onnx`, which never
- *     matched). That bug made a finished download report "incomplete".
- *  2. transformers.js resolves cached files as
- *     `path.join(env.cacheDir, '<repo>/<file>')`, so `env.cacheDir` MUST be
- *     `<userData>/models`. Pointing it at `<userData>` made the engine miss the
- *     files we had already downloaded and re-fetch all ~870 MB.
- *  3. `@xenova/transformers` and its native ONNX backend are devDependencies —
- *     release installers exclude them. `engineAvailable` reports that honestly
- *     so the UI never invites a download it cannot use.
+ *  1. 权重位于 `onnx/` 之下，因此完整性检查必须查看每个必需的仓库相对路径——
+ *     而不是在模型目录根下扫描 `*.onnx` 条目（根下的条目是「目录」`onnx`，永远
+ *     匹配不上）。这个 bug 会让已完成的下载被报告为「不完整」。
+ *  2. transformers.js 把缓存文件解析为 `path.join(env.cacheDir, '<repo>/<file>')`，
+ *     因此 `env.cacheDir`「必须」是 `<userData>/models`。把它指向 `<userData>` 会
+ *     让引擎找不到我们已下载的文件，转而重新拉取全部约 870 MB。
+ *  3. `@xenova/transformers` 及其原生 ONNX 后端是 devDependencies——发布安装包会
+ *     排除它们。`engineAvailable` 如实报告这一点，使界面永远不会引导用户去做一次
+ *     它无法使用的下载。
  */
 import path from 'path';
 import fs from 'fs';
@@ -37,8 +33,8 @@ import { getGlossaryById } from './glossary';
 import { insertHistory } from './db';
 import log from '../logger';
 
-// Keeps a real `import()` in CJS output (tsc would otherwise rewrite it into a
-// `require()` which cannot load the ESM transformers package on Node 20).
+// 在 CJS 输出中保留真正的 `import()`（否则 tsc 会把它改写成 `require()`，
+// 而后者在 Node 20 上无法加载 ESM 包 transformers）。
 const dynamicImport = new Function('specifier', 'return import(specifier)') as (
   specifier: string
 ) => Promise<any>;
@@ -46,9 +42,8 @@ const dynamicImport = new Function('specifier', 'return import(specifier)') as (
 const MODEL_ID = 'Xenova/nllb-200-distilled-600M';
 
 /**
- * Hugging Face host. Overridable via `WNT_HF_HOST` so the model can be fetched
- * from a mirror (e.g. `https://hf-mirror.com`) on networks where huggingface.co
- * is unreachable.
+ * Hugging Face 主机。可通过 `WNT_HF_HOST` 覆盖，使模型能从镜像（如
+ * `https://hf-mirror.com`）拉取，用于 huggingface.co 不可达的网络。
  */
 const HF_HOST = (process.env.WNT_HF_HOST || 'https://huggingface.co').replace(/\/+$/, '');
 const HF_BASE = `${HF_HOST}/${MODEL_ID}`;
@@ -56,27 +51,25 @@ const HF_BASE = `${HF_HOST}/${MODEL_ID}`;
 /** 下载失败时的最大重试次数（离线模型下载健壮性）。 */
 const MAX_DOWNLOAD_RETRIES = 3;
 
-/** Files fetched in parallel. Kept low so we are not a bad HF citizen. */
+/** 并行拉取的文件数。保持较低，以免给 HF 造成负担。 */
 const MAX_CONCURRENT_DOWNLOADS = 3;
 
 /** 进度事件节流：至少间隔 200ms 才向渲染进程推送一次，避免淹没 IPC 通道。 */
 const PROGRESS_EMIT_INTERVAL_MS = 200;
 
 /**
- * Packages that must resolve for offline translation to actually run.
- * `onnxruntime-node` is an optionalDependency of transformers.js, so a missing
- * native backend has to be detected explicitly rather than assumed present.
+ * 离线翻译实际运行所必须能解析到的包。`onnxruntime-node` 是 transformers.js 的
+ * optionalDependency，因此缺失的原生后端必须被显式探测出来，而不能假定存在。
  */
 const ENGINE_PACKAGES = ['@xenova/transformers', 'onnxruntime-node'];
 
-/** Shown whenever the build cannot run offline translation at all. */
+/** 当该构建完全无法运行离线翻译时显示。 */
 export const ENGINE_MISSING_MESSAGE =
   '当前安装包未包含离线翻译引擎，无法进行离线翻译（在线翻译不受影响）。';
 
 /**
- * The exact files the transformers.js NLLB pipeline needs (quantized build).
- * Used as the filter for the Hugging Face API tree and as the fallback list
- * when that request fails.
+ * transformers.js NLLB 流水线所需的精确文件清单（量化构建）。
+ * 用作 Hugging Face API tree 的过滤器，以及该请求失败时的回落列表。
  */
 const REQUIRED_MODEL_FILES = [
   'config.json',
@@ -90,11 +83,11 @@ const REQUIRED_MODEL_FILES = [
 ];
 
 interface ModelFile {
-  /** Repo-relative path, e.g. "onnx/encoder_model_quantized.onnx". */
+  /** 仓库相对路径，例如 "onnx/encoder_model_quantized.onnx"。 */
   path: string;
-  /** Size in bytes; 0 when unknown. */
+  /** 字节大小；未知时为 0。 */
   size: number;
-  /** sha256 from Hugging Face's LFS metadata, when the file is LFS-backed. */
+  /** 文件由 LFS 承载时，来自 Hugging Face 的 LFS 元数据的 sha256。 */
   sha256?: string;
 }
 
@@ -116,7 +109,7 @@ const state: OfflineModuleState = {
   pipeline: null,
 };
 
-/** FLORES-200 language codes understood by NLLB. */
+/** NLLB 能理解的 FLORES-200 语言代码。 */
 const FLORES_CODES: Record<string, string> = {
   zh: 'zho_Hans',
   en: 'eng_Latn',
@@ -124,15 +117,15 @@ const FLORES_CODES: Record<string, string> = {
   ko: 'kor_Hang',
 };
 
-// ---- Engine availability ----------------------------------------------------
+// ---- 引擎可用性 ------------------------------------------------------------
 
 let engineBundledCache: boolean | null = null;
 
 /**
- * Whether the offline engine ships in this build.
+ * 该构建是否随包携带离线引擎。
  *
- * Resolving the manifest is a cheap synchronous probe that works inside an asar
- * archive and does not load the module or its native backend.
+ * 解析清单是一次廉价的同步探测，在 asar 归档内也能工作，且不会加载该模块或其
+ * 原生后端。
  */
 function isEngineBundled(): boolean {
   if (engineBundledCache === null) {
@@ -151,9 +144,9 @@ function isEngineBundled(): boolean {
   return engineBundledCache;
 }
 
-// ---- Paths ------------------------------------------------------------------
+// ---- 路径 ------------------------------------------------------------------
 
-/** <userData>/models — the runtime download cache root. */
+/** <userData>/models —— 运行时下载缓存的根目录。 */
 function modelsBaseDir(): string {
   return path.join(app.getPath('userData'), 'models');
 }
@@ -163,25 +156,25 @@ function modelDir(): string {
   return path.join(modelsBaseDir(), ...MODEL_ID.split('/'));
 }
 
-/** Repo-relative path -> absolute path inside the local model directory. */
+/** 仓库相对路径 -> 本地模型目录内的绝对路径。 */
 function localFile(relPath: string): string {
   return path.join(modelDir(), ...relPath.split('/'));
 }
 
 /**
- * transformers.js looks files up as `path.join(env.cacheDir, '<repo>/<file>')`,
- * so the cache root must be the directory that CONTAINS the `Xenova` folder —
- * i.e. `<userData>/models`, exactly where `modelDir()` writes.
+ * transformers.js 按 `path.join(env.cacheDir, '<repo>/<file>')` 查找文件，因此缓存
+ * 根目录必须是「包含」`Xenova` 文件夹的那个目录——即 `<userData>/models`，正是
+ * `modelDir()` 写入的位置。
  */
 function modelCacheDir(): string {
   return modelsBaseDir();
 }
 
 /**
- * True when every required model file is present and non-empty.
+ * 当每个必需的模型文件都存在且非空时为 true。
  *
- * Checks each repo-relative path rather than scanning the directory root: the
- * weights live in `onnx/`, and a root-level `*.onnx` scan matched nothing.
+ * 检查每个仓库相对路径，而不是扫描目录根：权重位于 `onnx/` 下，而在根层扫描
+ * `*.onnx` 什么也匹配不到。
  */
 function modelFilesExist(): boolean {
   try {
@@ -194,17 +187,17 @@ function modelFilesExist(): boolean {
   }
 }
 
-/** A file counts as complete when its size matches the expected one. */
+/** 文件大小与预期一致时即视为完整。 */
 function isFileComplete(f: ModelFile): boolean {
   const stat = fs.statSync(localFile(f.path), { throwIfNoEntry: false });
   if (!stat || !stat.isFile()) return false;
-  if (!f.size) return stat.size > 0; // unknown expected size — any content counts
+  if (!f.size) return stat.size > 0; // 预期大小未知——只要有内容即算数
   return stat.size === f.size;
 }
 
-// ---- Status -----------------------------------------------------------------
+// ---- 状态 ------------------------------------------------------------------
 
-/** Optional listener wired from main.ts to stream progress to the renderer. */
+/** 可选监听器，从 main.ts 接入以把进度流推送到渲染进程。 */
 let progressListener: ((status: OfflineStatus) => void) | null = null;
 export function setOfflineProgressListener(fn: ((status: OfflineStatus) => void) | null): void {
   progressListener = fn;
@@ -215,7 +208,7 @@ function emitStatus(): void {
 }
 
 let lastEmitAt = 0;
-/** Throttled variant used inside the hot byte-streaming loop. */
+/** 在热字节流循环中使用的节流版本。 */
 function emitProgress(): void {
   const now = Date.now();
   if (now - lastEmitAt < PROGRESS_EMIT_INTERVAL_MS) return;
@@ -224,11 +217,11 @@ function emitProgress(): void {
 }
 
 /**
- * Single source of truth for the module's state.
+ * 模块状态的唯一事实来源。
  *
- * `downloaded` is derived purely from the files on disk — it used to also OR in
- * a persisted `offlineModelDownloaded` flag, which could claim "ready" for a
- * model that had never finished downloading (or had been deleted).
+ * `downloaded` 完全由磁盘上的文件推导——它过去还会或上一个持久化的
+ * `offlineModelDownloaded` 标志，那可能对从未下载完成（或已被删除）的模型宣称
+ * 「就绪」。
  */
 export function getOfflineStatus(): OfflineStatus {
   const settings = getSettings();
@@ -244,7 +237,7 @@ export function getOfflineStatus(): OfflineStatus {
   };
 }
 
-/** Reset transient state (used after a failed download / on disable). */
+/** 重置瞬时状态（下载失败后 / 禁用时使用）。 */
 function resetTransient(): void {
   state.downloading = false;
   state.progress = null;
@@ -253,17 +246,16 @@ function resetTransient(): void {
   state.error = null;
 }
 
-/** Resolve a repo-relative path to its download URL on Hugging Face. */
+/** 把仓库相对路径解析为它在 Hugging Face 上的下载 URL。 */
 function resolveUrl(filePath: string): string {
   return `${HF_BASE}/resolve/main/${encodeURI(filePath)}`;
 }
 
-// ---- File list --------------------------------------------------------------
+// ---- 文件清单 --------------------------------------------------------------
 
 /**
- * List the model files to download. The Hugging Face API tree is the source of
- * truth (it carries exact sizes and, for LFS-backed weights, the sha256); if it
- * fails we fall back to the static list and fill sizes in via HEAD requests.
+ * 列出要下载的模型文件。Hugging Face API tree 是事实来源（它带有精确大小，以及
+ * LFS 承载权重的 sha256）；若失败，我们回退到静态清单，并通过 HEAD 请求补齐大小。
  */
 async function resolveModelFileList(): Promise<ModelFile[]> {
   try {
@@ -292,15 +284,14 @@ async function resolveModelFileList(): Promise<ModelFile[]> {
     return files;
   } catch (err) {
     log.warn('[offline] HF tree request failed, using static file list:', (err as Error).message);
-    // Sizes (and so integrity checks) are recovered via HEAD below; sha256 is
-    // not available from this path.
+    // 大小（以及完整性检查）在下面通过 HEAD 恢复；sha256 无法从这条路径获得。
     return REQUIRED_MODEL_FILES.map((p) => ({ path: p, size: 0 }));
   }
 }
 
-// ---- Integrity --------------------------------------------------------------
+// ---- 完整性 ----------------------------------------------------------------
 
-/** Streaming sha256 so hashing a 400 MB weight file never blocks the main process. */
+/** 流式 sha256，因此对 400 MB 权重文件求哈希绝不会阻塞主进程。 */
 async function sha256File(file: string): Promise<string> {
   const hash = createHash('sha256');
   for await (const chunk of fs.createReadStream(file)) {
@@ -310,12 +301,11 @@ async function sha256File(file: string): Promise<string> {
 }
 
 /**
- * Verify a freshly written file before it is moved into place.
+ * 在把新写入的文件移入正式位置前校验它。
  *
- * Size is always checked; sha256 is checked when Hugging Face supplied one
- * (LFS-backed weights). Files that were already on disk are only size-checked
- * during resume — hashing ~870 MB on every launch would be worse than the
- * corruption it might catch.
+ * 大小总是检查；sha256 在 Hugging Face 提供时检查（LFS 承载的权重）。续传时对
+ * 磁盘上已有的文件只做大小校验——每次启动都对约 870 MB 求哈希，比它可能捕获的
+ * 损坏更糟。
  */
 async function verifyDownloaded(file: string, f: ModelFile): Promise<void> {
   const actualSize = fs.statSync(file).size;
@@ -330,9 +320,9 @@ async function verifyDownloaded(file: string, f: ModelFile): Promise<void> {
   }
 }
 
-// ---- Download ---------------------------------------------------------------
+// ---- 下载 ------------------------------------------------------------------
 
-/** Stream one file to <userData>/models/<model-id>/ with retries. */
+/** 带重试地把单个文件流式写入 <userData>/models/<model-id>/。 */
 async function downloadOneFile(f: ModelFile): Promise<void> {
   const dest = localFile(f.path);
   const tmp = `${dest}.part`;
@@ -344,11 +334,11 @@ async function downloadOneFile(f: ModelFile): Promise<void> {
     try {
       fs.rmSync(tmp, { force: true });
     } catch {
-      /* ignore */
+      /* 忽略 */
     }
 
-    // Bytes this attempt contributed, so a failure can be rolled back out of
-    // the global counter instead of inflating the progress bar.
+    // 本次尝试写入的字节数，这样失败时可以从全局计数器里回滚，
+    // 而不是把进度条撑虚。
     let attemptBytes = 0;
 
     try {
@@ -377,7 +367,7 @@ async function downloadOneFile(f: ModelFile): Promise<void> {
       try {
         fs.rmSync(tmp, { force: true });
       } catch {
-        /* ignore */
+        /* 忽略 */
       }
       if (attempt < MAX_DOWNLOAD_RETRIES) {
         log.warn(
@@ -397,18 +387,16 @@ function updateProgressFromBytes(): void {
 }
 
 /**
- * The runtime download: streams the quantized NLLB model from Hugging Face into
- * `<userData>/models/`.
+ * 运行时下载：把量化的 NLLB 模型从 Hugging Face 流式写入 `<userData>/models/`。
  *
- * The progress denominator is the size of the WHOLE model, with already-cached
- * files counted as done, so the percentage does not jump around between
- * attempts that have different amounts left to fetch.
+ * 进度的分母是整个模型的大小，其中已缓存的文件计入已完成，因此百分比不会在不同
+ * 剩余量的多次尝试之间来回跳动。
  */
 async function downloadModelFiles(): Promise<void> {
   fs.mkdirSync(modelDir(), { recursive: true });
   const files = await resolveModelFileList();
 
-  // Fill in unknown sizes via HEAD (static fallback list / odd tree answers).
+  // 通过 HEAD 补齐未知大小（静态回落清单 / tree 返回的异常结果）。
   await Promise.all(
     files
       .filter((f) => !f.size)
@@ -421,7 +409,7 @@ async function downloadModelFiles(): Promise<void> {
           const len = Number(head.headers.get('content-length'));
           if (head.ok && Number.isFinite(len) && len > 0) f.size = len;
         } catch {
-          /* keep size 0 — integrity and progress degrade gracefully */
+          /* 保持 size 为 0 —— 完整性与进度会优雅降级 */
         }
       })
   );
@@ -447,8 +435,8 @@ async function downloadModelFiles(): Promise<void> {
 
 async function loadTransformers(): Promise<any> {
   const mod = await dynamicImport('@xenova/transformers');
-  // Must be the folder that CONTAINS the model id directory, so the engine
-  // finds the files this module downloaded rather than re-fetching them.
+  // 必须是「包含」模型 id 目录的那个文件夹，这样引擎才能找到本模块已下载的
+  // 文件，而不是重新拉取。
   mod.env.cacheDir = modelCacheDir();
   mod.env.allowRemoteModels = true;
   mod.env.remoteHost = HF_HOST;
@@ -468,12 +456,11 @@ async function loadTransformers(): Promise<any> {
 }
 
 /**
- * Ensure the model is downloaded and the pipeline is warm. Called on demand
- * (IPC `download-model` / `offline:download`) and implicitly before an offline
- * translation.
+ * 确保模型已下载且流水线已预热。按需调用（IPC `download-model` /
+ * `offline:download`），并在离线翻译前隐式调用。
  *
- * Refuses outright when the engine is not in this build: fetching ~870 MB for a
- * feature that cannot run would be worse than an unhelpful error message.
+ * 当引擎不在本构建中时直接拒绝：为一个无法运行的特性去拉取约 870 MB，比给出一
+ * 条无用的错误消息更糟。
  */
 export async function ensureModel(): Promise<{ ok: boolean; error?: string }> {
   if (!isEngineBundled()) {
@@ -502,7 +489,7 @@ export async function ensureModel(): Promise<{ ok: boolean; error?: string }> {
     state.totalBytes = null;
     emitStatus();
 
-    // Warm the pipeline. The engine is guaranteed present by the guard above.
+    // 预热流水线。上面的守卫已保证引擎存在。
     try {
       const mod = await loadTransformers();
       let pipe: any = null;
@@ -524,8 +511,7 @@ export async function ensureModel(): Promise<{ ok: boolean; error?: string }> {
       if (pipe) state.pipeline = pipe;
       else throw lastErr ?? new Error('引擎初始化失败');
     } catch (err) {
-      // The model is on disk but the engine could not start — report it rather
-      // than pretending the download succeeded.
+      // 模型已在磁盘上，但引擎无法启动——如实上报，而不是假装下载成功。
       const msg = (err as Error).message;
       state.error = `离线翻译引擎初始化失败：${msg}`;
       log.error('[offline] pipeline warm failed:', err);
@@ -551,7 +537,7 @@ export async function ensureModel(): Promise<{ ok: boolean; error?: string }> {
   }
 }
 
-/** Translate `text` with the offline model, then apply the glossary. */
+/** 用离线模型翻译 `text`，然后应用术语表。 */
 export async function translateOffline(
   text: string,
   sourceLang: string,
@@ -589,7 +575,7 @@ export async function translateOffline(
     const glossary: Glossary | null = getGlossaryById(glossaryId);
     translated = applyGlossaryToText(translated, glossary);
 
-    // Record to history like the online path.
+    // 像在线路径一样记录到历史。
     insertHistory({
       sourceText: text,
       translatedText: translated,
@@ -606,8 +592,28 @@ export async function translateOffline(
   }
 }
 
-/** Free the pipeline (used on shutdown / when disabling offline mode). */
+/** 释放流水线（退出 / 禁用离线模式时使用）。 */
 export function disposeOfflineModel(): void {
   state.pipeline = null;
   resetTransient();
+}
+
+/**
+ * 真正加载一次离线引擎（不做推理），供打包校验与冒烟测试调用。
+ *
+ * 仅凭 `require.resolve` 无法证明引擎真的可用：`@xenova/transformers` 是 ESM
+ * 包，它在 asar 或解包目录里能否被加载、原生后端能否解析，只有实际 import
+ * 一次才知道。这条探测就是「离线版安装包是否真的能离线翻译」的证据。
+ */
+export async function probeEngineLoad(): Promise<{ ok: boolean; error?: string }> {
+  if (!isEngineBundled()) {
+    return { ok: false, error: 'ENGINE_NOT_BUNDLED' };
+  }
+  try {
+    await loadTransformers();
+    return { ok: true };
+  } catch (err) {
+    log.error('[offline] engine load probe failed:', err);
+    return { ok: false, error: (err as Error).message };
+  }
 }

@@ -10,7 +10,7 @@
 
 ## ✨ 功能特性
 
-- **托盘 + 快捷键交互**（v3.0.0）：应用常驻系统托盘，托盘菜单提供“显示 / 隐藏面板”与“退出”；按全局快捷键即可唤起无边框翻译窗口（非置顶悬浮，点击窗口外部自动收起）。
+- **托盘 + 快捷键交互**：应用常驻系统托盘，托盘菜单提供“显示 / 隐藏面板”与“退出”；按全局快捷键即可唤起无边框翻译窗口。窗口**不会**因失焦自动隐藏，收起请点右上角 **✕** 或使用托盘菜单。
 - **全局划词翻译**：在任意程序中选中文字，按 `Ctrl+Shift+Z`（可在设置中修改），自动复制、翻译并在弹出窗口中显示结果。
 - **浏览器标签页**：内置网页浏览器，输入章节网址即可提取正文，一键发送到翻译器。
 - **术语表（Glossary）**：管理自定义术语对，翻译时自动注入提示词，人名、设定词不再翻错。
@@ -27,11 +27,33 @@
 
 ## 📥 安装
 
-1. 从 [Releases 页面](https://github.com/SongFengYunHe/WebNovelTranslator/releases) 下载最新版：
-   - `WebNovelTranslator-Setup-<版本号>.exe` —— 安装版（推荐，可自定义安装目录、创建桌面快捷方式）
-   - `WebNovelTranslator-<版本号>-portable.exe` —— 免安装便携版
-2. 双击运行。若出现 SmartScreen 提示，点击 **更多信息 → 仍要运行**。
-3. 首次启动请在 **设置** 页配置 API 密钥（或开启离线翻译），即可开始使用。
+从 [Releases 页面](https://github.com/SongFengYunHe/WebNovelTranslator/releases) 下载。每个版本提供 **两种安装形态 × 两个版本**，**任选一个文件**即可：
+
+| 文件 | 版本 | 形态 | 体积 |
+| --- | --- | --- | --- |
+| `WebNovelTranslator-Setup-<版本号>.exe` | 标准版 | 安装版（可自定义目录、建桌面快捷方式） | 约 71 MB |
+| `WebNovelTranslator-<版本号>-portable.exe` | 标准版 | 免安装便携版 | 约 71 MB |
+| `WebNovelTranslator-Offline-Setup-<版本号>.exe` | **离线版** | 安装版 | 约 84 MB |
+| `WebNovelTranslator-Offline-<版本号>-portable.exe` | **离线版** | 免安装便携版 | 约 84 MB |
+
+1. 双击运行。若出现 SmartScreen 提示，点击 **更多信息 → 仍要运行**（安装包未做代码签名）。
+2. 首次启动请在 **设置** 页配置 API 密钥，即可开始使用。
+
+### 标准版 vs 离线版：该下哪个？
+
+| 能力 | 标准版 | 离线版 |
+| --- | --- | --- |
+| 在线翻译（DeepSeek / Kimi / 任意 OpenAI 兼容接口） | ✅ | ✅ |
+| 术语表 / 翻译历史 / EPUB 导出 / 划词翻译 / 浏览器提取 | ✅ | ✅ |
+| **离线翻译** | ❌ 设置页会明确禁用该开关并说明原因 | ✅ 需先联网下载约 870 MB 模型，之后断网也能翻译 |
+
+- **能用网络调 API 翻译，就下标准版**——更小，功能完全够用。
+- **经常断网、或在无网络设备上使用，才下离线版**。注意离线版**仍然需要联网一次**下载模型本体。
+- ⚠️ **两个版本二选一，不要同时安装。** 二者是同一个应用（相同 appId），共用同一套设置、术语表与历史记录：
+  - 从标准版换成离线版（或反之）**直接覆盖安装即可，数据不会丢失**；
+  - 同时装两个只会互相覆盖，没有意义。
+
+> 不确定就先装标准版——之后想换离线版，下对应的安装包覆盖安装就行。
 
 ---
 
@@ -78,17 +100,40 @@ npm start
 # 3. 仅构建（主进程 tsc + 渲染进程 esbuild）
 npm run build
 
-# 4. 打包安装版 + 便携版（输出到 release/）
+# 4. 打包「标准版」安装包 + 便携版（输出到 release/）
 npm run dist
+
+# 5. 打包「离线版」安装包 + 便携版（含本地推理引擎，输出到 release-offline/）
+npm run dist:offline
 ```
+
+> 两个版本**各自清理自己的输出目录**（`release/` 与 `release-offline/`），
+> 因此可以在同一次会话里依次构建，互不覆盖。
 
 > 国内网络提示：electron 二进制与 electron-builder 工具请使用 npmmirror 镜像：
 > `ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/`
 > `ELECTRON_BUILDER_BINARIES_MIRROR=https://npmmirror.com/mirrors/electron-builder-binaries/`
+> 离线模型默认从 `huggingface.co` 拉取；若该域名不可达，可用环境变量
+> `WNT_HF_HOST=https://hf-mirror.com` 指定镜像站。
 
 ### 关于体积
 
-为将安装包控制在 **80 MB 以内**，打包时**未包含离线翻译引擎**（`@xenova/transformers` 及其运行时，约 130MB）。因此发行版中“离线翻译”功能会提示引擎未包含；如需在开发版中体验离线翻译，请使用 `npm start` 直接运行（此时引擎位于 `node_modules`，功能完整可用）。模型本体始终按需下载到用户数据目录，不占用安装包体积。
+| 产物 | 体积 | 说明 |
+| --- | --- | --- |
+| `WebNovelTranslator-Setup-*.exe` | 约 71 MB | 标准版，不含推理引擎 |
+| `WebNovelTranslator-Offline-Setup-*.exe` | 约 84 MB | 离线版，含推理引擎 |
+
+标准版为控制体积**不分发离线推理引擎**（`@xenova/transformers` 及其运行时），
+所以安装包里的「离线翻译」开关会被明确禁用并说明原因，**不会引导用户下载 870 MB
+模型**——下了也没法用。
+
+离线版把引擎打进包里，代价只有 **约 13 MB**：打包时会裁掉引擎中与 Windows x64
+运行无关的部分（浏览器端产物、非 Windows 平台二进制、浏览器 WASM 后端，合计约
+163 MB，名单见 `scripts/packaging-shared.js`）。每一项裁减都经过实测——全部裁掉后
+`import('@xenova/transformers')` 与 `onnxruntime-node` 的 `InferenceSession`
+仍可正常加载。
+
+模型本体（约 870 MB）在两个版本里都始终按需下载到用户数据目录，不占用安装包体积。
 
 ---
 

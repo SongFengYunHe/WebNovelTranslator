@@ -5,6 +5,7 @@ node_modules/
 dist/
 out/
 release/
+release-offline/
 .cache/
 docs/
 *.exe

@@ -1,21 +1,17 @@
 /**
- * Main process entry point for the Floating Web Novel Translator.
+ * 浮空网文翻译器的主进程入口。
  *
- * Responsibilities:
- *  - Create the frameless popup-style translation window (v3.0.0 — the
- *    always-on-top floating bubble was removed in favour of a tray-driven,
- *    stable, non-floating popup window).
- *  - Create the system tray with a context menu (Show/Hide, Check for
- *    Updates, Quit).
- *  - Register the global hotkey (clipboard translation).
- *  - Register all IPC handlers (window control, glossary CRUD, settings,
- *    history, translation proxy, offline engine, EPUB export, updates).
- *  - Clean shutdown: destroy every window/view, close the SQLite DB,
- *    unregister the hotkey, and log the exit.
+ * 职责：
+ *  - 创建无边框弹窗式翻译窗口（v3.0.0——移除了置顶悬浮气泡，改为托盘驱动、
+ *    稳定、非浮动的弹窗窗口）。
+ *  - 创建带上下文菜单的系统托盘（显示/隐藏、检查更新、退出）。
+ *  - 注册全局快捷键（剪贴板翻译）。
+ *  - 注册所有 IPC 处理器（窗口控制、术语表 CRUD、设置、历史、翻译代理、
+ *    离线引擎、EPUB 导出、更新）。
+ *  - 干净退出：销毁每个窗口/视图、关闭 SQLite 数据库、注销快捷键并记录退出。
  *
- * Security: every renderer window runs with `contextIsolation: true`,
- * `nodeIntegration: false` and `sandbox: true`. All Node/file/network
- * operations happen here, in the main process.
+ * 安全：每个渲染进程窗口都以 `contextIsolation: true`、`nodeIntegration: false`
+ * 和 `sandbox: true` 运行。所有 Node/文件/网络操作都在主进程中进行。
  */
 import {
   app,
@@ -51,6 +47,7 @@ import {
   disposeOfflineModel,
   ensureModel,
   getOfflineStatus,
+  probeEngineLoad,
   setOfflineProgressListener,
 } from './services/offline';
 import { getMainWindowBounds, saveMainWindowBounds } from './state';
@@ -164,7 +161,7 @@ function setupAppMenu(): void {
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
-// ---- Window creation -------------------------------------------------------
+// ---- 窗口创建 --------------------------------------------------------------
 
 function createMainWindow(): void {
   const saved = getMainWindowBounds();
@@ -176,8 +173,8 @@ function createMainWindow(): void {
     minWidth: 680,
     minHeight: 520,
     show: false,
-    // v3.0.0: frameless popup-style window (dragged via the custom header).
-    // No OS title bar; the header provides a drag region + close buttons.
+    // v3.0.0：无边框弹窗式窗口（通过自定义标题栏拖动）。
+    // 没有操作系统标题栏；标题栏提供拖动区域 + 关闭按钮。
     frame: false,
     title: '浮空网文翻译器',
     icon: path.join(__dirname, '../../resources/icon.png'),
@@ -187,19 +184,19 @@ function createMainWindow(): void {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
-      webviewTag: true, // required by the built-in Browser tab
+      webviewTag: true, // 内置浏览器标签页需要它
       spellcheck: false,
     },
   });
 
   mainWindow.loadFile(path.join(__dirname, '../../public/index.html'));
 
-  // v3.0.1: the window must always appear on the Taskbar when minimized —
-  // the user hides it explicitly via the tray (Show/Hide) or the close
-  // button, and quits via the tray "Quit" menu item.
+  // v3.0.1：最小化时窗口必须始终出现在任务栏上——
+  // 用户通过托盘（显示/隐藏）或关闭按钮显式隐藏它，并通过托盘的「退出」
+  // 菜单项退出。
   mainWindow.setSkipTaskbar(false);
 
-  // Show the window once the renderer is ready (popup opens for the user).
+  // 渲染进程就绪后显示窗口（弹窗为用户打开）。
   mainWindow.once('ready-to-show', () => {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.show();
@@ -207,7 +204,7 @@ function createMainWindow(): void {
     }
   });
 
-  // Persist window bounds (Part E6) with a small debounce.
+  // 带小幅去抖地持久化窗口位置与尺寸（E6 部分）。
   const scheduleBoundsSave = () => {
     if (boundsSaveTimer) clearTimeout(boundsSaveTimer);
     boundsSaveTimer = trackTimer(
@@ -221,7 +218,7 @@ function createMainWindow(): void {
   mainWindow.on('move', scheduleBoundsSave);
   mainWindow.on('resize', scheduleBoundsSave);
 
-  // "Close" hides to the tray instead of quitting.
+  // 「关闭」是隐藏到托盘，而不是退出。
   mainWindow.on('close', (e: Electron.Event) => {
     if (!isQuitting) {
       e.preventDefault();
@@ -230,17 +227,16 @@ function createMainWindow(): void {
     }
   });
 
-  // v3.0.1: minimizing keeps the native default behavior (window stays on the
-  // Taskbar, tray keeps running). The previous blur -> hide() listener was
-  // removed — it fired whenever the window lost focus (including on minimize)
-  // and removed the Taskbar entry, hiding the app in the tray only. No
-  // preventDefault()/hide() logic exists on the minimize path.
+  // v3.0.1：最小化保持原生默认行为（窗口保留在任务栏上，托盘继续运行）。
+  // 之前的 blur -> hide() 监听器已被移除——它在窗口失去焦点时触发（包括最小化
+  // 时），并移除任务栏条目，把应用只隐藏到托盘中。最小化路径上不存在任何
+  // preventDefault()/hide() 逻辑。
 
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
 
-  // Open external links in the system browser, never inside the app.
+  // 在系统浏览器中打开外部链接，绝不在应用内打开。
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     if (/^https?:/i.test(url)) {
       shell.openExternal(url);
@@ -248,9 +244,9 @@ function createMainWindow(): void {
     return { action: 'deny' };
   });
 
-  // Harden every <webview> the Browser tab attaches. The `webpreferences`
-  // attribute on the tag is supplied by the renderer, so it cannot be trusted —
-  // force the safe values here and refuse non-HTTPS targets outright.
+  // 加固「浏览器」标签页附着的每个 <webview>。标签上的 `webpreferences`
+  // 属性由渲染进程提供，因此不可信任——在这里强制使用安全值，并直接拒绝
+  // 非 HTTPS 目标。
   mainWindow.webContents.on('will-attach-webview', (event, webPreferences, params) => {
     delete webPreferences.preload;
     webPreferences.nodeIntegration = false;
@@ -258,35 +254,56 @@ function createMainWindow(): void {
     webPreferences.sandbox = true;
 
     const src = params?.src ?? '';
-    // `about:blank` is the initial state before the user enters a URL.
+    // `about:blank` 是用户输入 URL 之前的初始状态。
     if (src !== 'about:blank' && !/^https:\/\//i.test(src)) {
       log.warn(`[webview] blocked attach to a non-HTTPS URL: ${src}`);
       event.preventDefault();
     }
   });
 
-  // Optional automated smoke test (used by `npm run smoke`).
-  // The `--smoke-test` flag is the cross-platform path: `SMOKE_TEST=1 electron .`
-  // only works where the shell supports inline env vars, but npm runs scripts
-  // through cmd.exe on Windows, so that form silently failed there.
+  // 可选的自动化冒烟测试（由 `npm run smoke` 使用）。
+  // `--smoke-test` 是跨平台的路径：`SMOKE_TEST=1 electron .` 只在 shell 支持行内
+  // 环境变量的地方有效，而 npm 在 Windows 上通过 cmd.exe 运行脚本，因此那种写法
+  // 在那里会静默失败。
   const isSmokeTest = process.env.SMOKE_TEST === '1' || process.argv.includes('--smoke-test');
   if (isSmokeTest) {
     mainWindow.webContents.once('did-finish-load', async () => {
       try {
-        // Also round-trips one real IPC call (system:health) so the smoke test
-        // exercises the preload bridge end to end, not just that React mounted.
+        // 同时发起 system:health 与 offline:status 两次真实 IPC 往返：既验证
+        // preload 桥本身而不只是 React 挂载，也把「本次构建是否包含离线引擎」
+        // 写进结果——打包后可直接用它校验标准版 / 离线版各自是否正确。
         const info = await mainWindow!.webContents.executeJavaScript(
           `(async () => {
-             const health = await window.electronAPI.systemHealth();
+             const [health, offline] = await Promise.all([
+               window.electronAPI.systemHealth(),
+               window.electronAPI.offlineStatus()
+             ]);
              return JSON.stringify({
                rootChildren: document.getElementById('root')?.children.length ?? -1,
                hasElectronAPI: typeof window.electronAPI === 'object',
-               dbOk: health?.database?.ok ?? null
+               dbOk: health?.database?.ok ?? null,
+               offlineEngine: offline?.engineAvailable ?? null
              });
            })()`
         );
         // 冒烟测试结果写入 stdout（供 CI 解析），不使用 console.log。
-        process.stdout.write('SMOKE_TEST_RESULT ' + info + '\n');
+        // 这里再补一次真实的引擎加载探测：这是「离线版安装包能否真的离线翻译」
+        // 的直接证据——仅检查文件是否存在，无法证明 ESM 入口在 asar 解包后
+        // 能被 Node 的 ESM 加载器读到。
+        const result = JSON.parse(info);
+        const engine = await probeEngineLoad();
+        result.engineLoads = engine.ok;
+        if (!engine.ok) result.engineLoadError = engine.error;
+        const payload = JSON.stringify(result);
+        // 冒烟测试结果写入 stdout（供 CI 解析），不使用 console.log。
+        process.stdout.write('SMOKE_TEST_RESULT ' + payload + '\n');
+        // 打包后的 Windows GUI 程序不一定把 stdout 接力到父控制台，因此再落一份
+        // 结果文件到 userData 下——打包校验（标准版 / 离线版）与 CI 都可直接读它。
+        try {
+          fs.writeFileSync(path.join(app.getPath('userData'), 'smoke-result.json'), payload, 'utf-8');
+        } catch (writeErr) {
+          log.warn('[smoke] failed to write smoke-result.json:', (writeErr as Error).message);
+        }
       } catch (err) {
         process.stdout.write('SMOKE_TEST_ERROR ' + String(err) + '\n');
       }
@@ -311,7 +328,7 @@ function togglePanel(): void {
   }
 }
 
-// ---- Tray ------------------------------------------------------------------
+// ---- 托盘 ------------------------------------------------------------------
 
 function createTray(): void {
   const iconPath = path.join(__dirname, '../../resources/tray.png');
@@ -321,7 +338,7 @@ function createTray(): void {
   tray.setToolTip('浮空网文翻译器');
   tray.setContextMenu(
     Menu.buildFromTemplate([
-      // v3.0.0: a single "Show/Hide" toggle opens the popup window.
+      // v3.0.0：单个「显示/隐藏」开关即可打开弹窗。
       { label: '显示 / 隐藏面板', click: togglePanel },
       { type: 'separator' },
       {
@@ -357,13 +374,13 @@ function createTray(): void {
       },
     ])
   );
-  // v3.0.1: single left-click always shows the window (win.show()) so it can
-  // never get stuck hidden; double-click keeps the show/hide toggle.
+  // v3.0.1：单击始终显示窗口（win.show()），因此它绝不会卡在隐藏状态；
+  // 双击保持显示/隐藏切换。
   tray.on('click', showPanel);
   tray.on('double-click', togglePanel);
 }
 
-// ---- Global hotkey wiring (Part A3) ----------------------------------------
+// ---- 全局快捷键接线（A3 部分）---------------------------------------------
 
 function buildHotkeyTranslate(): (req: TranslateRequest) => Promise<TranslateResult> {
   return async (req: TranslateRequest) => {
@@ -411,13 +428,13 @@ function makeHotkeyContext(): HotkeyContext {
   };
 }
 
-/** (Re-)register the hotkey from the current settings value. */
+/** （重新）用当前设置值注册快捷键。 */
 function reloadHotkey(): { ok: boolean; reason?: string } {
   const settings = getSettings();
   return registerHotkey(settings.hotkey || 'Ctrl+Shift+Z', makeHotkeyContext());
 }
 
-// ---- Offline progress wiring (Part A4) -------------------------------------
+// ---- 离线进度接线（A4 部分）------------------------------------------------
 
 function wireOfflineProgress(): void {
   setOfflineProgressListener((status) => {
@@ -426,10 +443,10 @@ function wireOfflineProgress(): void {
   });
 }
 
-// ---- Startup: updates, sanity check, offline resume -------------------------
+// ---- 启动：更新、健全性检查、离线续传 ---------------------------------------
 
 function checkForUpdatesOnStartup(): void {
-  // Wait until the app has settled before hitting the network.
+  // 等应用稳定后再发起网络请求。
   trackTimer(
     setTimeout(() => {
       void (async () => {
@@ -444,9 +461,9 @@ function checkForUpdatesOnStartup(): void {
   );
 }
 
-/** Part E7: verify data dir exists and (on first run) remind about the API key. */
+/** E7 部分：确认数据目录存在，并在首次运行时提醒配置 API 密钥。 */
 function startupSanityCheck(): void {
-  // initDatabase() also guarantees <userData>/translator-data exists.
+  // initDatabase() 同时保证 <userData>/translator-data 存在。
   initDatabase();
 
   const settings = getSettings();
@@ -472,15 +489,14 @@ function startupSanityCheck(): void {
     !offline.downloaded &&
     !offline.downloading
   ) {
-    // The user already opted into offline mode in a previous session; resume
-    // the download now that the app is running. Skipped entirely when this
-    // build has no offline engine — there would be nothing to run it with.
+    // 用户在上一次会话中已选择启用离线模式；趁应用正在运行续传下载。
+    // 当本构建没有离线引擎时完全跳过——没有引擎也就无从运行。
     log.info('[startup] offline mode enabled but model missing — starting download');
     void ensureModel();
   }
 }
 
-// ---- Clean shutdown (Part E2 / 零残留退出) ----------------------------------
+// ---- 干净退出（E2 部分 / 零残留退出）---------------------------------------
 
 let cleanupDone = false;
 
@@ -526,7 +542,7 @@ function cleanupOnQuit(): void {
       try {
         w.webContents.close();
       } catch {
-        /* ignore */
+        /* 忽略 */
       }
       w.destroy();
     }
@@ -548,7 +564,7 @@ function cleanupOnQuit(): void {
   }
 }
 
-// ---- App lifecycle ----------------------------------------------------------
+// ---- 应用生命周期 -----------------------------------------------------------
 
 const gotLock = app.requestSingleInstanceLock();
 
@@ -574,7 +590,7 @@ if (!gotLock) {
     createTray();
     wireOfflineProgress();
 
-    // Global hotkey (Part A3).
+    // 全局快捷键（A3 部分）。
     const hotkeyResult = reloadHotkey();
     if (!hotkeyResult.ok) {
       // 快捷键注册失败：同时弹出中文提醒与托盘通知，应用不会崩溃。
@@ -601,14 +617,14 @@ if (!gotLock) {
   });
 }
 
-// Keep the app alive in the tray even when all windows are hidden.
+// 即使所有窗口都被隐藏，也让应用在托盘中保持存活。
 app.on('window-all-closed', () => {
-  // Intentionally do nothing: the app lives in the system tray.
+  // 有意什么都不做：应用驻留在系统托盘中。
 });
 
-// Part E2: clean exit — kill all background processes and log the status.
+// E2 部分：干净退出——结束所有后台进程并记录状态。
 app.on('before-quit', () => {
-  // Ensure window `close` handlers don't cancel the quit.
+  // 确保窗口的 `close` 处理器不会取消这次退出。
   isQuitting = true;
   try {
     cleanupOnQuit();
