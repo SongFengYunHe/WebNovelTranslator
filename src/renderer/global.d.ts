@@ -19,6 +19,7 @@ declare global {
   interface HTMLWebViewElement extends HTMLElement {
     loadURL: (url: string, options?: Record<string, unknown>) => Promise<void>;
     getTitle: () => string;
+    getURL: () => string;
     executeJavaScript: (code: string, userGesture?: boolean) => Promise<unknown>;
   }
 }
