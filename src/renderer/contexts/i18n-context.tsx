@@ -11,7 +11,7 @@
  * 设置对齐。
  */
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { translate, type Locale, type TranslationKey } from '../i18n';
+import { translate, type Locale, type TranslationKey } from '../../shared/i18n';
 
 const STORAGE_KEY = 'ui-locale';
 

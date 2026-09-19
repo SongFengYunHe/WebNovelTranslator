@@ -1,6 +1,9 @@
 /**
  * 英文界面文案。此对象的键定义了 `TranslationKey` 类型；
  * `zh.ts` 必须保持键一致（由 `Dictionary` 强制）。
+ *
+ * `main.*` 前缀的词条供主进程使用（原生菜单、托盘、对话框、错误消息），
+ * 其余词条供渲染进程使用。
  */
 export const en = {
   'app.title': 'Web Novel Translator',
@@ -11,9 +14,20 @@ export const en = {
   'app.tabs.settings': 'Settings',
   'app.minimize': 'Minimize (keeps the Taskbar entry)',
   'app.closeWindow': 'Close window',
+  'app.nav': 'Main navigation',
 
   'health.dbUnavailable':
     'Translation history is unavailable — translations still work, but they will not be saved. See the log for details.',
+
+  'errors.unknown': 'Unknown error.',
+  'errors.offlineFailed': 'Offline translation failed.',
+  'errors.api.invalidKey': 'The API key is invalid or lacks permission — check the key in Settings.',
+  'errors.api.quota': 'Quota exhausted or rate-limited — switch keys or try again later.',
+  'errors.api.server': 'The server is temporarily unavailable — please try again later.',
+  'errors.api.requestFailed': 'Request failed (HTTP {status}): {msg}',
+  'errors.api.generic': 'Request failed — check your API settings or try again later.',
+  'errors.network': 'Network request failed — check your connection or try again later.',
+  'errors.request': 'Request failed: {msg}',
 
   'langs.zh': 'Chinese',
   'langs.en': 'English',
@@ -172,4 +186,98 @@ export const en = {
   'onboarding.body':
     'Add your API key in Settings to start translating, or enable offline translation (no key needed).',
   'onboarding.goSettings': 'Go to Settings',
+
+  // ---- 主进程（原生菜单 / 托盘 / 对话框 / 错误消息）----------------------------
+  'main.appName': 'Floating Web Novel Translator',
+  'main.menu.file': 'File',
+  'main.menu.edit': 'Edit',
+  'main.menu.view': 'View',
+  'main.menu.window': 'Window',
+  'main.menu.help': 'Help',
+  'main.menu.quit': 'Quit',
+  'main.menu.closeWindow': 'Close Window',
+  'main.menu.undo': 'Undo',
+  'main.menu.redo': 'Redo',
+  'main.menu.cut': 'Cut',
+  'main.menu.copy': 'Copy',
+  'main.menu.paste': 'Paste',
+  'main.menu.selectAll': 'Select All',
+  'main.menu.reload': 'Reload',
+  'main.menu.forceReload': 'Force Reload',
+  'main.menu.toggleDevTools': 'Toggle Developer Tools',
+  'main.menu.resetZoom': 'Actual Size',
+  'main.menu.zoomIn': 'Zoom In',
+  'main.menu.zoomOut': 'Zoom Out',
+  'main.menu.toggleFullscreen': 'Toggle Full Screen',
+  'main.menu.minimize': 'Minimize',
+  'main.menu.about': 'About',
+
+  'main.dialog.ok': 'OK',
+  'main.dialog.aboutTitle': 'About',
+  'main.dialog.aboutDetail': 'Version {version}',
+
+  'main.tray.toggle': 'Show / Hide panel',
+  'main.tray.checkUpdates': 'Check for updates',
+  'main.tray.quit': 'Quit',
+  'main.update.upToDate': "You're up to date.",
+
+  'main.update.checking': 'Already checking — please wait…',
+  'main.update.fetchFailed': 'Could not fetch update information.',
+  'main.update.networkFailed': 'Cannot reach the update server.',
+  'main.update.availableTitle': 'Update available',
+  'main.update.availableMessage': 'Version v{version} is available. Open the download page?',
+  'main.update.openPage': 'Open download page',
+  'main.update.cancel': 'Cancel',
+
+  'main.hotkey.conflictTitle': 'Hotkey conflict',
+  'main.hotkey.registerFailed':
+    'Could not register the hotkey — another application may be using it. Choose a different shortcut in Settings.',
+  'main.hotkey.noSelection':
+    'No selected text detected. Select text in another application first, then press the shortcut.',
+  'main.hotkey.translateFailed': 'Translation failed — please try again.',
+  'main.hotkey.translateFailedDetail': 'Translation failed — see the log for details.',
+
+  'main.translate.cancelled': 'Translation cancelled.',
+  'main.translate.failed': 'Translation failed.',
+  'main.translate.emptyResponse': 'The model returned an empty response — please try again.',
+  'main.translate.noApiKey': 'No API key configured yet — add one in Settings.',
+  'main.translate.emptyInput': 'There is nothing to translate.',
+  'main.translate.chunkPrefix': 'Section {index}/{total}: ',
+
+  'main.connection.noApiKey': 'No API key configured yet.',
+  'main.connection.ok': 'Connection OK (HTTP {status}, model {model}).',
+  'main.history.nothingToExport': 'Nothing to export.',
+  'main.history.exportTitleCsv': 'Export history (CSV)',
+  'main.history.exportTitleJson': 'Export history (JSON)',
+  'main.history.csvFilter': 'CSV file',
+  'main.history.jsonFilter': 'JSON file',
+  'main.history.exportCancelled': 'Export cancelled.',
+  'main.history.exportFailed': 'Export failed: {msg}',
+
+  'main.epub.exportTitle': 'Export EPUB',
+  'main.epub.filter': 'EPUB eBook',
+  'main.epub.cancelled': 'Export cancelled.',
+  'main.epub.failed': 'EPUB export failed: {msg}',
+  'main.epub.chapterLabel': 'Chapter {index}',
+  'main.epub.original': 'Original',
+  'main.epub.translation': 'Translation',
+  'main.epub.lang': 'en',
+
+  'main.offline.engineMissing':
+    'This build does not include the offline translation engine, so offline translation is unavailable (online translation is unaffected).',
+  'main.offline.downloading': 'The model is still downloading — please wait…',
+  'main.offline.incomplete': 'The model files are incomplete — please retry the download.',
+  'main.offline.initFailed': 'Failed to initialize the offline engine: {msg}',
+  'main.offline.downloadFailedNetwork':
+    'Model download failed — check your network connection and try again.',
+  'main.offline.downloadFailed': 'Model download failed: {msg}',
+  'main.offline.notEnabled': 'Offline translation is not enabled — turn it on in Settings.',
+  'main.offline.notReady': 'The offline engine is not ready yet — please try again shortly.',
+  'main.offline.translateFailed': 'Offline translation failed: {msg}',
+  'main.offline.langPairUnsupported':
+    'That language pair is not supported offline yet (only zh/en/ja/ko are).',
+  'main.offline.sizeMismatch':
+    'Size mismatch (expected {expected} bytes, got {actual}).',
+  'main.offline.hashMismatch': 'Verification failed (sha256 mismatch).',
+  'main.offline.unknownError': 'Unknown error',
 };

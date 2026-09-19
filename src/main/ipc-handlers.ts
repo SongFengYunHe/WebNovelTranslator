@@ -16,6 +16,7 @@ import type {
   UpdateCheckResult,
 } from '../shared/types';
 import log from './logger';
+import { mainLocale, mt } from './i18n';
 import { RELEASES_URL } from '../shared/constants';
 import { friendlyApiError, friendlyNetworkError } from '../shared/api-errors';
 import { getSettings, normalizeBaseUrl, toPublic, updateSettings } from './settings';
@@ -61,6 +62,8 @@ export interface IpcContext {
   reloadHotkey: () => { ok: boolean; reason?: string };
   /** 向用户显示一条托盘式通知。 */
   notify: (title: string, body: string) => void;
+  /** 界面语言变化后重建原生菜单 / 托盘（其文案在创建时就已固化）。 */
+  refreshLocalizedUi: () => void;
 }
 
 /** 翻译并记录到历史（所有在线路径的唯一事实来源）。 */
@@ -125,12 +128,18 @@ export function registerIpcHandlers(ctx: IpcContext): void {
   // ---- 设置 -------------------------------------------------------------------
   handle('settings:get', () => toPublic(getSettings()));
 
-  handle('settings:set', (raw) => updateSettings(validateSaveSettingsPatch(raw)));
+  handle('settings:set', (raw) => {
+    const patch = validateSaveSettingsPatch(raw);
+    const next = updateSettings(patch);
+    // 语言在原生 UI 创建时就已固化，切换后需要重建菜单 / 托盘。
+    if (patch.uiLanguage) ctx.refreshLocalizedUi();
+    return next;
+  });
 
   handle('settings:test-connection', async (): Promise<TestConnectionResult> => {
     const settings = getSettings();
     if (!settings.apiKey) {
-      return { success: false, message: '尚未配置 API 密钥。' };
+      return { success: false, message: mt('main.connection.noApiKey') };
     }
     // 用一次真实的（极小的）completion 探测，而不是 GET /models：许多
     // OpenAI 兼容端点——Azure、Ollama 代理、各类网关——并未实现 /models，
@@ -156,16 +165,16 @@ export function registerIpcHandlers(ctx: IpcContext): void {
       if (res.ok) {
         return {
           success: true,
-          message: `连接成功（HTTP ${res.status}，模型 ${settings.model}）。`,
+          message: mt('main.connection.ok', { status: res.status, model: settings.model }),
           latencyMs,
         };
       }
       const body = await res.text().catch(() => '');
-      return { success: false, message: friendlyApiError(res.status, body), latencyMs };
+      return { success: false, message: friendlyApiError(res.status, body, mainLocale()), latencyMs };
     } catch (err) {
       return {
         success: false,
-        message: friendlyNetworkError((err as Error).message),
+        message: friendlyNetworkError((err as Error).message, mainLocale()),
         latencyMs: Date.now() - started,
       };
     }
@@ -231,24 +240,27 @@ export function registerIpcHandlers(ctx: IpcContext): void {
     const req = validateHistoryExport(raw);
     const rows = allHistory();
     if (!rows.length) {
-      return { ok: false, error: '没有可导出的记录。' };
+      return { ok: false, error: mt('main.history.nothingToExport') };
     }
     const defaultName = `history-${new Date().toISOString().slice(0, 10)}.${
       req.kind === 'csv' ? 'csv' : 'json'
     }`;
     const win = ctx.getMainWindow();
     const saveOpts = {
-      title: req.kind === 'csv' ? '导出历史记录 (CSV)' : '导出历史记录 (JSON)',
+      title:
+        req.kind === 'csv'
+          ? mt('main.history.exportTitleCsv')
+          : mt('main.history.exportTitleJson'),
       defaultPath: path.join(os.homedir(), 'Downloads', defaultName),
       filters:
         req.kind === 'csv'
-          ? [{ name: 'CSV 文件', extensions: ['csv'] }]
-          : [{ name: 'JSON 文件', extensions: ['json'] }],
+          ? [{ name: mt('main.history.csvFilter'), extensions: ['csv'] }]
+          : [{ name: mt('main.history.jsonFilter'), extensions: ['json'] }],
     };
     const { canceled, filePath } = win
       ? await dialog.showSaveDialog(win, saveOpts)
       : await dialog.showSaveDialog(saveOpts);
-    if (canceled || !filePath) return { ok: false, error: '已取消导出。' };
+    if (canceled || !filePath) return { ok: false, error: mt('main.history.exportCancelled') };
 
     let content: string;
     if (req.kind === 'json') {
@@ -267,7 +279,7 @@ export function registerIpcHandlers(ctx: IpcContext): void {
       return { ok: true, filePath, count: rows.length };
     } catch (err) {
       log.error('[history] export failed:', err);
-      return { ok: false, error: `导出失败：${(err as Error).message}` };
+      return { ok: false, error: mt('main.history.exportFailed', { msg: (err as Error).message }) };
     }
   });
 

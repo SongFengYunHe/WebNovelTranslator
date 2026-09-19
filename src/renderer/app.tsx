@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { useApp, type TabId } from './contexts/app-context';
 import { useI18n } from './contexts/i18n-context';
-import type { TranslationKey } from './i18n';
+import type { TranslationKey } from '../shared/i18n';
 import TranslationPanel from './components/translation-panel';
 import BrowserView from './components/browser-view';
 import GlossaryEditor from './components/glossary-editor';
@@ -42,7 +42,7 @@ export default function App() {
         <div className="app-title">
           <span className="app-logo">🌐</span> {t('app.title')}
         </div>
-        <nav className="tabs" aria-label="导航">
+        <nav className="tabs" aria-label={t('app.nav')}>
           {TABS.map((tabDef) => (
             <button
               key={tabDef.id}

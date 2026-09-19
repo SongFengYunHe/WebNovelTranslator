@@ -7,6 +7,7 @@ import path from 'path';
 import EpubGen from 'epub-gen';
 import type { EpubRequest } from '../../shared/types';
 import log from '../logger';
+import { mt } from '../i18n';
 
 function escapeHtml(s: string): string {
   return s
@@ -43,28 +44,28 @@ export async function exportEpub(
   const defaultName = `${(request.defaultTitle || 'novel').replace(/[\\/:*?"<>|]/g, '_')}.epub`;
 
   const saveOpts = {
-    title: '导出 EPUB',
+    title: mt('main.epub.exportTitle'),
     defaultPath: path.join(require('os').homedir(), 'Downloads', defaultName),
-    filters: [{ name: 'EPUB 电子书', extensions: ['epub'] }],
+    filters: [{ name: mt('main.epub.filter'), extensions: ['epub'] }],
   };
   const { canceled, filePath } = win
     ? await dialog.showSaveDialog(win, saveOpts)
     : await dialog.showSaveDialog(saveOpts);
   if (canceled || !filePath) {
-    return { ok: false, error: '已取消导出。' };
+    return { ok: false, error: mt('main.epub.cancelled') };
   }
 
   const content = request.chapters.map((ch, i) => ({
-    title: ch.title || `第 ${i + 1} 章`,
+    title: ch.title || mt('main.epub.chapterLabel', { index: i + 1 }),
     data: `
-      <h3>${escapeHtml(ch.title || `第 ${i + 1} 章`)}</h3>
+      <h3>${escapeHtml(ch.title || mt('main.epub.chapterLabel', { index: i + 1 }))}</h3>
       <div style="border-bottom:1px solid #ccc;padding-bottom:8px;">
-        <strong>原文</strong>
+        <strong>${mt('main.epub.original')}</strong>
       </div>
       ${paragraphsToHtml(ch.original)}
       <hr/>
       <div style="padding-top:4px;">
-        <strong>译文</strong>
+        <strong>${mt('main.epub.translation')}</strong>
       </div>
       ${paragraphsToHtml(ch.translated)}
     `,
@@ -72,10 +73,10 @@ export async function exportEpub(
 
   const options = {
     title: request.defaultTitle || 'Novel',
-    author: 'Floating Web Novel Translator',
-    publisher: 'Floating Web Novel Translator',
-    // 导出 EPUB 元数据标记为中文，方便阅读器正确选择字体与排版。
-    lang: 'zh',
+    author: mt('main.appName'),
+    publisher: mt('main.appName'),
+    // 语言元数据跟随界面语言；中文时方便阅读器正确选择字体与排版。
+    lang: mt('main.epub.lang'),
     content,
   };
 
@@ -86,6 +87,6 @@ export async function exportEpub(
     return { ok: true, filePath };
   } catch (err) {
     log.error('[epub] export failed:', err);
-    return { ok: false, error: `EPUB 导出失败：${(err as Error).message}` };
+    return { ok: false, error: mt('main.epub.failed', { msg: (err as Error).message }) };
   }
 }

@@ -27,6 +27,7 @@ import path from 'path';
 import os from 'os';
 import fs from 'fs';
 import { registerIpcHandlers } from './ipc-handlers';
+import { mt } from './i18n';
 import log, { logExit } from './logger';
 import { getSettings } from './settings';
 import { getGlossaryById } from './services/glossary';
@@ -90,65 +91,66 @@ function clearTrackedTimers(): void {
 }
 
 /**
- * 将 Electron 原生菜单本地化为中文（保留全部默认快捷键）。
+ * 构建 Electron 原生菜单（保留全部默认快捷键），文案跟随当前界面语言。
  * 未显式设置菜单时 Electron 会显示英文的 File/Edit/View/Window/Help。
  */
-function setupAppMenu(): void {
+function buildAppMenu(): Electron.Menu {
+  const ok = mt('main.dialog.ok');
   const template: Electron.MenuItemConstructorOptions[] = [
     {
-      label: '文件',
+      label: mt('main.menu.file'),
       submenu: [
         process.platform === 'darwin'
-          ? { role: 'close', label: '关闭窗口' }
-          : { role: 'quit', label: '退出' },
+          ? { role: 'close', label: mt('main.menu.closeWindow') }
+          : { role: 'quit', label: mt('main.menu.quit') },
       ],
     },
     {
-      label: '编辑',
+      label: mt('main.menu.edit'),
       submenu: [
-        { role: 'undo', label: '撤销' },
-        { role: 'redo', label: '重做' },
+        { role: 'undo', label: mt('main.menu.undo') },
+        { role: 'redo', label: mt('main.menu.redo') },
         { type: 'separator' },
-        { role: 'cut', label: '剪切' },
-        { role: 'copy', label: '复制' },
-        { role: 'paste', label: '粘贴' },
-        { role: 'selectAll', label: '全选' },
+        { role: 'cut', label: mt('main.menu.cut') },
+        { role: 'copy', label: mt('main.menu.copy') },
+        { role: 'paste', label: mt('main.menu.paste') },
+        { role: 'selectAll', label: mt('main.menu.selectAll') },
       ],
     },
     {
-      label: '视图',
+      label: mt('main.menu.view'),
       submenu: [
-        { role: 'reload', label: '重新加载' },
-        { role: 'forceReload', label: '强制重新加载' },
-        { role: 'toggleDevTools', label: '开发者工具' },
+        { role: 'reload', label: mt('main.menu.reload') },
+        { role: 'forceReload', label: mt('main.menu.forceReload') },
+        { role: 'toggleDevTools', label: mt('main.menu.toggleDevTools') },
         { type: 'separator' },
-        { role: 'resetZoom', label: '实际大小' },
-        { role: 'zoomIn', label: '放大' },
-        { role: 'zoomOut', label: '缩小' },
+        { role: 'resetZoom', label: mt('main.menu.resetZoom') },
+        { role: 'zoomIn', label: mt('main.menu.zoomIn') },
+        { role: 'zoomOut', label: mt('main.menu.zoomOut') },
         { type: 'separator' },
-        { role: 'togglefullscreen', label: '全屏' },
+        { role: 'togglefullscreen', label: mt('main.menu.toggleFullscreen') },
       ],
     },
     {
-      label: '窗口',
+      label: mt('main.menu.window'),
       submenu: [
-        { role: 'minimize', label: '最小化' },
-        { role: 'close', label: '关闭窗口' },
+        { role: 'minimize', label: mt('main.menu.minimize') },
+        { role: 'close', label: mt('main.menu.closeWindow') },
       ],
     },
     {
-      label: '帮助',
+      label: mt('main.menu.help'),
       role: 'help',
       submenu: [
         {
-          label: '关于',
+          label: mt('main.menu.about'),
           click: () => {
             const opts = {
               type: 'info' as const,
-              title: '关于',
-              message: '浮空网文翻译器',
-              detail: `版本 ${app.getVersion()}`,
-              buttons: ['确定'],
+              title: mt('main.dialog.aboutTitle'),
+              message: mt('main.appName'),
+              detail: mt('main.dialog.aboutDetail', { version: app.getVersion() }),
+              buttons: [ok],
             };
             const win = mainWindow;
             if (win && !win.isDestroyed()) void dialog.showMessageBox(win, opts);
@@ -158,7 +160,11 @@ function setupAppMenu(): void {
       ],
     },
   ];
-  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+  return Menu.buildFromTemplate(template);
+}
+
+function setupAppMenu(): void {
+  Menu.setApplicationMenu(buildAppMenu());
 }
 
 // ---- 窗口创建 --------------------------------------------------------------
@@ -176,7 +182,7 @@ function createMainWindow(): void {
     // v3.0.0：无边框弹窗式窗口（通过自定义标题栏拖动）。
     // 没有操作系统标题栏；标题栏提供拖动区域 + 关闭按钮。
     frame: false,
-    title: '浮空网文翻译器',
+    title: mt('main.appName'),
     icon: path.join(__dirname, '../../resources/icon.png'),
     backgroundColor: '#f5f6fa',
     webPreferences: {
@@ -330,54 +336,68 @@ function togglePanel(): void {
 
 // ---- 托盘 ------------------------------------------------------------------
 
+function buildTrayMenu(): Electron.Menu {
+  return Menu.buildFromTemplate([
+    // v3.0.0：单个「显示/隐藏」开关即可打开弹窗。
+    { label: mt('main.tray.toggle'), click: togglePanel },
+    { type: 'separator' },
+    {
+      label: mt('main.tray.checkUpdates'),
+      click: () => {
+        void (async () => {
+          const result = await checkForUpdates(() => mainWindow);
+          if (result.available && result.version) {
+            await promptForUpdate(() => mainWindow, result.version, () =>
+              shell.openExternal(RELEASES_URL)
+            );
+          } else {
+            const win = mainWindow;
+            const msgOpts = {
+              type: 'info' as const,
+              title: mt('main.tray.checkUpdates'),
+              message: result.error ? result.error : mt('main.update.upToDate'),
+              buttons: [mt('main.dialog.ok')],
+            };
+            if (win && !win.isDestroyed()) void dialog.showMessageBox(win, msgOpts);
+            else void dialog.showMessageBox(msgOpts);
+          }
+        })();
+      },
+    },
+    { type: 'separator' },
+    {
+      label: mt('main.tray.quit'),
+      click: () => {
+        isQuitting = true;
+        app.quit();
+      },
+    },
+  ]);
+}
+
 function createTray(): void {
   const iconPath = path.join(__dirname, '../../resources/tray.png');
   const icon = nativeImage.createFromPath(iconPath);
 
   tray = new Tray(icon);
-  tray.setToolTip('浮空网文翻译器');
-  tray.setContextMenu(
-    Menu.buildFromTemplate([
-      // v3.0.0：单个「显示/隐藏」开关即可打开弹窗。
-      { label: '显示 / 隐藏面板', click: togglePanel },
-      { type: 'separator' },
-      {
-        label: '检查更新',
-        click: () => {
-          void (async () => {
-            const result = await checkForUpdates(() => mainWindow);
-            if (result.available && result.version) {
-              await promptForUpdate(() => mainWindow, result.version, () =>
-                shell.openExternal(RELEASES_URL)
-              );
-            } else {
-              const win = mainWindow;
-              const msgOpts = {
-                type: 'info' as const,
-                title: '检查更新',
-                message: result.error ? result.error : '当前已是最新版本。',
-                buttons: ['确定'],
-              };
-              if (win && !win.isDestroyed()) void dialog.showMessageBox(win, msgOpts);
-              else void dialog.showMessageBox(msgOpts);
-            }
-          })();
-        },
-      },
-      { type: 'separator' },
-      {
-        label: '退出',
-        click: () => {
-          isQuitting = true;
-          app.quit();
-        },
-      },
-    ])
-  );
+  tray.setToolTip(mt('main.appName'));
+  tray.setContextMenu(buildTrayMenu());
   // v3.0.1：单击始终显示窗口（win.show()），因此它绝不会卡在隐藏状态；
   // 双击保持显示/隐藏切换。
   tray.on('click', showPanel);
   tray.on('double-click', togglePanel);
+}
+
+/**
+ * 重建所有文案在创建时就已固化的原生 UI（应用菜单 + 托盘菜单）。
+ * 用户在设置中切换界面语言后由 IPC 层调用，使语言即时生效而无需重启。
+ */
+function refreshLocalizedUi(): void {
+  setupAppMenu();
+  if (tray) {
+    tray.setToolTip(mt('main.appName'));
+    tray.setContextMenu(buildTrayMenu());
+  }
 }
 
 // ---- 全局快捷键接线（A3 部分）---------------------------------------------
@@ -577,13 +597,14 @@ if (!gotLock) {
     log.info(`[startup] v${app.getVersion()} on ${process.platform} ${process.arch}`);
     configureAutoUpdater();
 
-    // 原生菜单本地化为中文。
+    // 原生菜单按当前界面语言构建。
     setupAppMenu();
 
     registerIpcHandlers({
       getMainWindow: () => mainWindow,
       reloadHotkey,
       notify: notifyUser,
+      refreshLocalizedUi,
     });
 
     createMainWindow();
@@ -593,17 +614,18 @@ if (!gotLock) {
     // 全局快捷键（A3 部分）。
     const hotkeyResult = reloadHotkey();
     if (!hotkeyResult.ok) {
-      // 快捷键注册失败：同时弹出中文提醒与托盘通知，应用不会崩溃。
+      // 快捷键注册失败：同时弹出提醒与托盘通知，应用不会崩溃。
+      // `hotkeyResult.reason` 已按当前界面语言生成（见 ./hotkey.ts）。
       log.warn(`[startup] hotkey registration failed: ${hotkeyResult.reason}`);
-      const reason = hotkeyResult.reason ?? '无法注册全局快捷键，请在设置中更换。';
+      const reason = hotkeyResult.reason ?? mt('main.hotkey.registerFailed');
       trackTimer(
         setTimeout(() => {
-          notifyUser('快捷键冲突', reason);
+          notifyUser(mt('main.hotkey.conflictTitle'), reason);
           const opts = {
             type: 'warning' as const,
-            title: '快捷键冲突',
+            title: mt('main.hotkey.conflictTitle'),
             message: reason,
-            buttons: ['确定'],
+            buttons: [mt('main.dialog.ok')],
           };
           const win = mainWindow;
           if (win && !win.isDestroyed()) void dialog.showMessageBox(win, opts);

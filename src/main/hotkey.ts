@@ -15,6 +15,7 @@ import { clipboard, globalShortcut, type BrowserWindow } from 'electron';
 import { execFile } from 'child_process';
 import type { TranslateRequest, TranslateResult } from '../shared/types';
 import log from './logger';
+import { mt } from './i18n';
 
 export interface HotkeyContext {
   /** 用当前设置 + 提示词翻译文本。 */
@@ -92,7 +93,7 @@ async function handleHotkey(): Promise<void> {
   const text = await waitForClipboard(before);
 
   if (!text || !text.trim()) {
-    ctx.notify('全局划词', '未检测到选中的文字。请先在其它程序中选中文字，再按快捷键。');
+    ctx.notify(mt('notify.hotkeyResult'), mt('main.hotkey.noSelection'));
     return;
   }
 
@@ -102,11 +103,11 @@ async function handleHotkey(): Promise<void> {
     if (result.success && result.text) {
       ctx.showResult(text, result.text);
     } else {
-      ctx.notify('全局划词', result.error ?? '翻译失败，请稍后重试。');
+      ctx.notify(mt('notify.hotkeyResult'), result.error ?? mt('main.hotkey.translateFailed'));
     }
   } catch (err) {
     log.error('[hotkey] translation failed:', err);
-    ctx.notify('全局划词', '翻译失败，请查看日志。');
+    ctx.notify(mt('notify.hotkeyResult'), mt('main.hotkey.translateFailedDetail'));
   }
 }
 
@@ -121,8 +122,8 @@ export function registerHotkey(accelerator: string, ctx: HotkeyContext): { ok: b
       void handleHotkey();
     });
     if (!ok) {
-      // 快捷键冲突：给出中文提示，引导用户更换快捷键。
-      return { ok: false, reason: '快捷键注册失败，可能被其他应用占用，请在设置中更换快捷键。' };
+      // 快捷键冲突：给出提示，引导用户更换快捷键。
+      return { ok: false, reason: mt('main.hotkey.registerFailed') };
     }
     currentAccelerator = accelerator;
     hotkeyCtx = ctx;
@@ -131,7 +132,7 @@ export function registerHotkey(accelerator: string, ctx: HotkeyContext): { ok: b
   } catch (err) {
     log.error('[hotkey] registration error:', err);
     // 注册异常也必须返回 ok:false，主进程据此提示用户而不会崩溃。
-    return { ok: false, reason: '快捷键注册失败，可能被其他应用占用，请在设置中更换快捷键。' };
+    return { ok: false, reason: mt('main.hotkey.registerFailed') };
   }
 }
 

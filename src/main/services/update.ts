@@ -11,6 +11,7 @@ import { UPDATE_FEED_URL } from '../../shared/constants';
 import { isNewerVersion } from '../../shared/version';
 import type { UpdateCheckResult } from '../../shared/types';
 import log from '../logger';
+import { mt } from '../i18n';
 
 // 源 URL 派生自 `shared/constants.ts` 中的规范仓库地址，因此 fork 绝不会错误地
 // 指向上游项目的发布页。
@@ -48,7 +49,7 @@ export function configureAutoUpdater(): void {
 export async function checkForUpdates(
   getWindow: () => BrowserWindow | null
 ): Promise<UpdateCheckResult> {
-  if (checking) return { available: false, error: '正在检查中，请稍候…' };
+  if (checking) return { available: false, error: mt('main.update.checking') };
   // 占位地址直接静默跳过，避免无意义的报错打扰用户。
   if (isPlaceholderFeed) {
     log.warn('[update] feed URL is a placeholder — skipping update check');
@@ -59,7 +60,7 @@ export async function checkForUpdates(
     const result = await autoUpdater.checkForUpdates();
     if (!result) {
       checking = false;
-      return { available: false, error: '无法获取更新信息。' };
+      return { available: false, error: mt('main.update.fetchFailed') };
     }
     const info = result.updateInfo;
     const latest = info.version;
@@ -70,7 +71,7 @@ export async function checkForUpdates(
   } catch (err) {
     checking = false;
     log.warn('[update] check threw:', (err as Error).message);
-    return { available: false, error: '无法连接更新服务器。' };
+    return { available: false, error: mt('main.update.networkFailed') };
   }
 }
 
@@ -83,9 +84,9 @@ export async function promptForUpdate(
   const win = getWindow();
   const opts = {
     type: 'info' as const,
-    title: '发现新版本',
-    message: `新版本 (v${version}) 可用。是否打开下载页面？`,
-    buttons: ['打开下载页', '取消'],
+    title: mt('main.update.availableTitle'),
+    message: mt('main.update.availableMessage', { version }),
+    buttons: [mt('main.update.openPage'), mt('main.update.cancel')],
     defaultId: 0,
     cancelId: 1,
   };

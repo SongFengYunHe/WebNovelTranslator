@@ -11,6 +11,7 @@ import { chunkText } from '../shared/chunking';
 import { anySignal, delay, runWithConcurrency } from '../shared/concurrency';
 import { MAX_ATTEMPTS, backoffDelayMs, isRetryableError, isRetryableStatus } from '../shared/retry';
 import log from './logger';
+import { mainLocale, mt } from './i18n';
 import { getSettings, normalizeBaseUrl } from './settings';
 import { cacheTranslation, getCachedTranslation, translationCacheKey } from './translation-cache';
 
@@ -115,7 +116,7 @@ async function requestChunk(
       return {
         ok: false,
         text: '',
-        error: friendlyApiError(res.status, res.text),
+        error: friendlyApiError(res.status, res.text, mainLocale()),
         retryable: isRetryableStatus(res.status),
       };
     }
@@ -123,19 +124,19 @@ async function requestChunk(
     const content = res.data?.choices?.[0]?.message?.content;
     if (typeof content !== 'string' || content.trim() === '') {
       // 被截断或为空的回复通常是模型的瞬时抖动。
-      return { ok: false, text: '', error: '模型返回了空内容，请重试。', retryable: true };
+      return { ok: false, text: '', error: mt('main.translate.emptyResponse'), retryable: true };
     }
     return { ok: true, text: content, retryable: false };
   } catch (err) {
     const message = (err as Error).message;
     // 任务信号只在显式取消时触发；超时另有自己的信号。
     if (signal.aborted) {
-      return { ok: false, text: '', error: '已取消翻译。', retryable: false };
+      return { ok: false, text: '', error: mt('main.translate.cancelled'), retryable: false };
     }
     return {
       ok: false,
       text: '',
-      error: friendlyNetworkError(message),
+      error: friendlyNetworkError(message, mainLocale()),
       retryable: isRetryableError(message),
     };
   }
@@ -147,11 +148,11 @@ async function translateChunkWithRetry(
   systemPrompt: string,
   signal: AbortSignal
 ): Promise<ChunkOutcome> {
-  let last: ChunkOutcome = { ok: false, text: '', error: '翻译失败。', retryable: false };
+  let last: ChunkOutcome = { ok: false, text: '', error: mt('main.translate.failed'), retryable: false };
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     if (signal.aborted) {
-      return { ok: false, text: '', error: '已取消翻译。', retryable: false };
+      return { ok: false, text: '', error: mt('main.translate.cancelled'), retryable: false };
     }
 
     last = await requestChunk(chunk, systemPrompt, signal);
@@ -180,12 +181,12 @@ export async function translateViaApi(
 ): Promise<TranslateResult> {
   const settings = getSettings();
   if (!settings.apiKey) {
-    return { success: false, error: '尚未配置 API 密钥，请在设置中添加。' };
+    return { success: false, error: mt('main.translate.noApiKey') };
   }
 
   const chunks = chunkText(text);
   if (!chunks.length) {
-    return { success: false, error: '没有可翻译的内容。' };
+    return { success: false, error: mt('main.translate.emptyInput') };
   }
 
   const job = new AbortController();
@@ -221,13 +222,13 @@ export async function translateViaApi(
     });
   } catch (err) {
     log.error('[translate] job failed:', err);
-    return { success: false, error: friendlyNetworkError((err as Error).message) };
+    return { success: false, error: friendlyNetworkError((err as Error).message, mainLocale()) };
   } finally {
     activeJobs.delete(job);
   }
 
   if (signal.aborted) {
-    return { success: false, error: '已取消翻译。' };
+    return { success: false, error: mt('main.translate.cancelled') };
   }
 
   const failedIndex = results.findIndex((r) => !r?.ok);
@@ -235,9 +236,12 @@ export async function translateViaApi(
     const outcome = results[failedIndex];
     // 告知用户「哪一部分」失败了——启用分块后，单说「翻译失败」无法判断
     // 是首段还是末段出错。
-    const where = chunks.length > 1 ? `第 ${failedIndex + 1}/${chunks.length} 段：` : '';
+    const where =
+      chunks.length > 1
+        ? mt('main.translate.chunkPrefix', { index: failedIndex + 1, total: chunks.length })
+        : '';
     log.error(`[translate] chunk ${failedIndex + 1}/${chunks.length} failed: ${outcome?.error}`);
-    return { success: false, error: `${where}${outcome?.error ?? '翻译失败。'}` };
+    return { success: false, error: `${where}${outcome?.error ?? mt('main.translate.failed')}` };
   }
 
   return { success: true, text: results.map((r) => r.text).join('\n') };

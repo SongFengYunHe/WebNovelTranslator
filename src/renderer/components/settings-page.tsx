@@ -17,7 +17,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useApp } from '../contexts/app-context';
 import { useI18n } from '../contexts/i18n-context';
-import type { Locale } from '../i18n';
+import type { Locale } from '../../shared/i18n';
 import type { ProviderId } from '../../shared/types';
 import { PROVIDER_PRESETS } from '../../shared/types';
 import {

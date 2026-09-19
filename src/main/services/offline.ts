@@ -32,6 +32,7 @@ import { getSettings } from '../settings';
 import { getGlossaryById } from './glossary';
 import { insertHistory } from './db';
 import log from '../logger';
+import { mt } from '../i18n';
 
 // 在 CJS 输出中保留真正的 `import()`（否则 tsc 会把它改写成 `require()`，
 // 而后者在 Node 20 上无法加载 ESM 包 transformers）。
@@ -62,10 +63,6 @@ const PROGRESS_EMIT_INTERVAL_MS = 200;
  * optionalDependency，因此缺失的原生后端必须被显式探测出来，而不能假定存在。
  */
 const ENGINE_PACKAGES = ['@xenova/transformers', 'onnxruntime-node'];
-
-/** 当该构建完全无法运行离线翻译时显示。 */
-export const ENGINE_MISSING_MESSAGE =
-  '当前安装包未包含离线翻译引擎，无法进行离线翻译（在线翻译不受影响）。';
 
 /**
  * transformers.js NLLB 流水线所需的精确文件清单（量化构建）。
@@ -310,12 +307,12 @@ async function sha256File(file: string): Promise<string> {
 async function verifyDownloaded(file: string, f: ModelFile): Promise<void> {
   const actualSize = fs.statSync(file).size;
   if (f.size > 0 && actualSize !== f.size) {
-    throw new Error(`大小不符（预期 ${f.size} 字节，实际 ${actualSize}）`);
+    throw new Error(mt('main.offline.sizeMismatch', { expected: f.size, actual: actualSize }));
   }
   if (f.sha256) {
     const actual = await sha256File(file);
     if (actual !== f.sha256) {
-      throw new Error('校验失败（sha256 不匹配）');
+      throw new Error(mt('main.offline.hashMismatch'));
     }
   }
 }
@@ -377,7 +374,7 @@ async function downloadOneFile(f: ModelFile): Promise<void> {
       }
     }
   }
-  throw lastErr ?? new Error('未知错误');
+  throw lastErr ?? new Error(mt('main.offline.unknownError'));
 }
 
 function updateProgressFromBytes(): void {
@@ -426,7 +423,7 @@ async function downloadModelFiles(): Promise<void> {
   await runWithConcurrency(pending, MAX_CONCURRENT_DOWNLOADS, (f) => downloadOneFile(f));
 
   if (!modelFilesExist()) {
-    throw new Error('模型文件不完整，请重试下载。');
+    throw new Error(mt('main.offline.incomplete'));
   }
   state.loadedBytes = null;
   state.totalBytes = null;
@@ -464,13 +461,13 @@ async function loadTransformers(): Promise<any> {
  */
 export async function ensureModel(): Promise<{ ok: boolean; error?: string }> {
   if (!isEngineBundled()) {
-    return { ok: false, error: ENGINE_MISSING_MESSAGE };
+    return { ok: false, error: mt('main.offline.engineMissing') };
   }
   if (state.pipeline) {
     return { ok: true };
   }
   if (state.downloading) {
-    return { ok: false, error: '模型正在下载中，请稍候…' };
+    return { ok: false, error: mt('main.offline.downloading') };
   }
 
   state.downloading = true;
@@ -481,7 +478,7 @@ export async function ensureModel(): Promise<{ ok: boolean; error?: string }> {
       await downloadModelFiles();
     }
     if (!modelFilesExist()) {
-      throw new Error('模型文件不完整，请重试下载。');
+      throw new Error(mt('main.offline.incomplete'));
     }
     state.downloading = false;
     state.progress = 1;
@@ -509,11 +506,11 @@ export async function ensureModel(): Promise<{ ok: boolean; error?: string }> {
         }
       }
       if (pipe) state.pipeline = pipe;
-      else throw lastErr ?? new Error('引擎初始化失败');
+      else throw lastErr ?? new Error(mt('main.offline.unknownError'));
     } catch (err) {
       // 模型已在磁盘上，但引擎无法启动——如实上报，而不是假装下载成功。
       const msg = (err as Error).message;
-      state.error = `离线翻译引擎初始化失败：${msg}`;
+      state.error = mt('main.offline.initFailed', { msg });
       log.error('[offline] pipeline warm failed:', err);
       emitStatus();
       return { ok: false, error: state.error };
@@ -522,7 +519,7 @@ export async function ensureModel(): Promise<{ ok: boolean; error?: string }> {
     log.info('[offline] model ready');
     return { ok: true };
   } catch (err) {
-    const msg = (err as Error).message || '未知错误';
+    const msg = (err as Error).message || mt('main.offline.unknownError');
     log.error('[offline] model download/load failed:', err);
     state.downloading = false;
     state.progress = null;
@@ -530,8 +527,8 @@ export async function ensureModel(): Promise<{ ok: boolean; error?: string }> {
     state.totalBytes = null;
     state.error =
       /network|fetch|ECONNREFUSED|ENOTFOUND|timed? ?out|aborted|503|429/i.test(msg)
-        ? '离线模型下载失败，请检查网络后重试。'
-        : `离线模型下载失败：${msg}`;
+        ? mt('main.offline.downloadFailedNetwork')
+        : mt('main.offline.downloadFailed', { msg });
     emitStatus();
     return { ok: false, error: state.error };
   }
@@ -546,23 +543,23 @@ export async function translateOffline(
 ): Promise<TranslateResult> {
   const settings = getSettings();
   if (!settings.offlineEnabled) {
-    return { success: false, error: '离线翻译未启用，请在设置中开启。' };
+    return { success: false, error: mt('main.offline.notEnabled') };
   }
   if (!isEngineBundled()) {
-    return { success: false, error: ENGINE_MISSING_MESSAGE };
+    return { success: false, error: mt('main.offline.engineMissing') };
   }
   if (!state.pipeline) {
     const ensured = await ensureModel();
     if (!ensured.ok) return { success: false, error: ensured.error };
     if (!state.pipeline) {
-      return { success: false, error: '离线翻译引擎尚未就绪，请稍后重试。' };
+      return { success: false, error: mt('main.offline.notReady') };
     }
   }
 
   const srcCode = FLORES_CODES[sourceLang];
   const tgtCode = FLORES_CODES[targetLang];
   if (!srcCode || !tgtCode) {
-    return { success: false, error: '该语言对暂不支持离线翻译（仅支持中/英/日/韩）。' };
+    return { success: false, error: mt('main.offline.langPairUnsupported') };
   }
 
   try {
@@ -588,7 +585,7 @@ export async function translateOffline(
     return { success: true, text: translated };
   } catch (err) {
     log.error('[offline] translation failed:', err);
-    return { success: false, error: `离线翻译失败：${(err as Error).message}` };
+    return { success: false, error: mt('main.offline.translateFailed', { msg: (err as Error).message }) };
   }
 }
 

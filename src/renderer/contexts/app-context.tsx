@@ -25,7 +25,7 @@ import type {
   SystemHealth,
   TranslateProgress,
 } from '../../shared/types';
-import type { TranslationKey } from '../i18n';
+import type { TranslationKey } from '../../shared/i18n';
 import { useI18n } from './i18n-context';
 import { apiCancelTranslate, apiSystemHealth } from '../services/api';
 import { buildSystemPrompt } from '../../shared/prompt-builder';
@@ -213,7 +213,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           originalText: text,
           translatedText: '',
           translating: false,
-          error: result.error ?? '未知错误。',
+          error: result.error ?? t('errors.unknown'),
         });
         return false;
       };
@@ -234,7 +234,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           originalText: text,
           translatedText: '',
           translating: false,
-          error: result.error ?? '离线翻译失败。',
+          error: result.error ?? t('errors.offlineFailed'),
         });
         return false;
       };
