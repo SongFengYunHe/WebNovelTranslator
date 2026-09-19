@@ -36,7 +36,7 @@ const REPO_URL = (
 ).replace(/\.git$/, '');
 const UPDATE_FEED_URL = `${REPO_URL}/releases/latest/download/`;
 
-const { RUNTIME_ENGINE_PACKAGES } = require('./scripts/packaging-shared.js');
+const { buildFiles } = require('./scripts/packaging-shared.js');
 
 module.exports = {
   appId: 'com.webnoveltranslator.app',
@@ -49,24 +49,10 @@ module.exports = {
   },
 
   // 只分发应用真正需要的内容。生产环境 node_modules 会自动包含；
-  // 开发/测试文件绝不进入安装包。
-  // 显式排除 sourcemap / 源码 / 测试文件等开发产物。
-  files: [
-    'dist/**/*',
-    'public/**/*',
-    'resources/**/*',
-    'package.json',
-    '!**/*.map',
-    '!**/*.ts',
-    '!**/*.tsx',
-    '!**/*.test.*',
-    '!**/__tests__/**',
-    '!**/*.md',
-    // 标准版不分发离线推理引擎（约 50MB）。引擎包在 package.json 中登记为
-    // dependencies（打包器一律剔除 devDependencies，放那边就永远打不进去），
-    // 所以必须在这里显式排除。需要离线能力的用户请用 `npm run dist:offline`。
-    ...RUNTIME_ENGINE_PACKAGES.map((p) => `!${p}/**`),
-  ],
+  // 开发/测试文件绝不进入安装包。清单由 scripts/packaging-shared.js 统一组装：
+  // 标准版会连同「只有离线引擎才用到」的旁支依赖一起排除（约 12MB），
+  // 需要离线能力的用户请用 `npm run dist:offline`。
+  files: buildFiles({ includeEngine: false }),
 
   asar: true,
   compression: 'maximum',

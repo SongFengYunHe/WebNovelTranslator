@@ -13,13 +13,7 @@
  * appId 会让用户换版本时丢掉全部数据。
  */
 const base = require('./electron-builder.config.js');
-const {
-  RUNTIME_ENGINE_PACKAGES,
-  RUNTIME_ENGINE_EXCLUDES,
-} = require('./scripts/packaging-shared.js');
-
-/** 标准版 files 中针对引擎包的排除项，离线版要把它们换成包含项。 */
-const engineExclusions = new Set(RUNTIME_ENGINE_PACKAGES.map((p) => `!${p}/**`));
+const { buildFiles } = require('./scripts/packaging-shared.js');
 
 module.exports = {
   ...base,
@@ -27,12 +21,9 @@ module.exports = {
   // 独立输出目录，便于与标准版并存，也便于对比两者体积。
   directories: { ...base.directories, output: 'release-offline' },
 
-  // 顺序有意义：先继承标准版的通用规则与包含项，再补上引擎包，最后叠加裁减项。
-  files: [
-    ...base.files.filter((p) => !engineExclusions.has(p)),
-    ...RUNTIME_ENGINE_PACKAGES.map((p) => `${p}/**`),
-    ...RUNTIME_ENGINE_EXCLUDES,
-  ],
+  // 离线版把「排除引擎」换成「包含引擎 + 裁掉引擎内与 Win x64 无关的部分」，
+  // 其余通用排除项（编译期源码、测试、示例）两版一致。
+  files: buildFiles({ includeEngine: true }),
 
   asarUnpack: [
     ...base.asarUnpack,
