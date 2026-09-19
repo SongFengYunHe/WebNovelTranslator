@@ -3,16 +3,18 @@
  *
  * 流程：
  *   1. 注册一个全局快捷键（默认 `Ctrl+Shift+Z`，可配置）。
- *   2. 按下时，当前获得焦点的（外部）应用中有选中的文字；我们向它发送 Ctrl+C
- *      按键，等待剪贴板变化，然后读取复制到的文本。
+ *   2. 按下时读取剪贴板中已有的文本——用户先复制要翻译的段落，再按快捷键。
  *   3. 用当前设置翻译该文本，并把结果推送到主面板，使其保持显示在浏览器之上。
  *
- * 在没有原生模块的情况下模拟跨平台 Ctrl+C 很脆弱，因此在 Windows 上我们用一个
- * 极小的 PowerShell SendKeys 单行命令（不像 robotjs 那样依赖二进制文件）。在其它
- * 平台上，我们回退为读取剪贴板中已有的内容。
+ * P5：不再模拟 Ctrl+C 取词。旧实现每次取词都要冷启动 `powershell.exe` 发送
+ * SendKeys——约 100–300ms，受执行策略限制（`docs/` 中那份《PowerShell 脚本权限
+ * 修复》即为此问题的产物），并且在 macOS/Linux 上完全没有发送按键的分支，等待
+ * 剪贴板「变化」必然超时，快捷键形同虚设。
+ *
+ * 改为直接读剪贴板后：各平台行为一致、零进程启动开销，也不引入任何原生按键模拟
+ * 模块（那会让安装包与 CI 背上原生模块 ABI 的包袱）。
  */
-import { clipboard, globalShortcut, type BrowserWindow } from 'electron';
-import { execFile } from 'child_process';
+import { clipboard, globalShortcut } from 'electron';
 import type { TranslateRequest, TranslateResult } from '../shared/types';
 import log from './logger';
 import { mt } from './i18n';
@@ -29,77 +31,26 @@ export interface HotkeyContext {
 let currentAccelerator: string | null = null;
 let hotkeyCtx: HotkeyContext | null = null;
 
-/** 在 Windows 上运行时为 true（唯一模拟 Ctrl+C 的平台）。 */
-const isWindows = process.platform === 'win32';
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-/** 通过 PowerShell 向获得焦点（前台）的窗口发送 Ctrl+C 按键。 */
-function simulateCopy(): Promise<void> {
-  return new Promise((resolve) => {
-    if (!isWindows) {
-      resolve();
-      return;
-    }
-    const args = [
-      '-NoProfile',
-      '-NonInteractive',
-      '-WindowStyle',
-      'Hidden',
-      '-Command',
-      'Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait("^c")',
-    ];
-    execFile('powershell.exe', args, { windowsHide: true }, (err) => {
-      if (err) log.warn('[hotkey] SendKeys failed (copy may not happen):', err.message);
-      resolve();
-    });
-  });
-}
-
-/**
- * 等待剪贴板文本与 `before` 不同（或出现非空值），最长 `timeoutMs`。返回该文本，
- * 超时则返回 null。
- */
-async function waitForClipboard(before: string, timeoutMs = 2500): Promise<string | null> {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    try {
-      const now = clipboard.readText();
-      if (now && now !== before) return now;
-    } catch (err) {
-      // 剪贴板可能被其它进程锁定——稍后再次轮询。
-      log.warn('[hotkey] clipboard read failed, retrying:', (err as Error).message);
-    }
-    await sleep(80);
-  }
-  return null;
-}
-
 async function handleHotkey(): Promise<void> {
   const ctx = hotkeyCtx;
   if (!ctx) return;
 
-  const before = (() => {
-    try {
-      return clipboard.readText();
-    } catch {
-      return '';
-    }
-  })();
-
-  await simulateCopy();
-  const text = await waitForClipboard(before);
+  // 剪贴板可能被其它进程短暂锁定；读失败只是没内容，不该让快捷键链路抛异常。
+  let text = '';
+  try {
+    text = clipboard.readText();
+  } catch (err) {
+    log.warn('[hotkey] clipboard read failed:', (err as Error).message);
+  }
 
   if (!text || !text.trim()) {
-    ctx.notify(mt('notify.hotkeyResult'), mt('main.hotkey.noSelection'));
+    ctx.notify(mt('notify.hotkeyResult'), mt('main.hotkey.emptyClipboard'));
     return;
   }
 
   try {
+    // 提示词留空：translateViaApi 会按当前设置与术语表补齐，与界面路径同源。
     const result = await ctx.translate({ text, systemPrompt: '' });
-    // `translate` 在提示词为空时会内部补齐（全局快捷键路径）。
     if (result.success && result.text) {
       ctx.showResult(text, result.text);
     } else {

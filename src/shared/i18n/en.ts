@@ -156,7 +156,8 @@ export const en = {
   'settings.howToBody':
     'The app speaks the OpenAI-compatible /chat/completions API, so it works with OpenAI, Azure, Groq, DeepSeek, Kimi (Moonshot), local Ollama (e.g. http://localhost:11434/v1) and many other providers. Translation requests are sent from the main process only.',
   'settings.hotkey': 'Global hotkey',
-  'settings.hotkeyHint': 'Select text in any app, then press this shortcut to translate it.',
+  'settings.hotkeyHint':
+    'Copy the text you want to translate in any app, then press this shortcut.',
   'settings.hotkeyConflict': 'Hotkey registration failed: {reason}',
   'settings.hotkeySaved': '✓ Hotkey saved',
   'settings.checkUpdates': 'Check for updates',
@@ -232,8 +233,8 @@ export const en = {
   'main.hotkey.conflictTitle': 'Hotkey conflict',
   'main.hotkey.registerFailed':
     'Could not register the hotkey — another application may be using it. Choose a different shortcut in Settings.',
-  'main.hotkey.noSelection':
-    'No selected text detected. Select text in another application first, then press the shortcut.',
+  'main.hotkey.emptyClipboard':
+    'The clipboard is empty — copy the text you want to translate first, then press the shortcut.',
   'main.hotkey.translateFailed': 'Translation failed — please try again.',
   'main.hotkey.translateFailedDetail': 'Translation failed — see the log for details.',
 

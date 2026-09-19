@@ -147,8 +147,8 @@ export const zh: Record<TranslationKey, string> = {
   'settings.howToTitle': '如何获取 API 密钥',
   'settings.howToBody':
     '本应用使用 OpenAI 兼容的 /chat/completions 接口，因此可配合 OpenAI、Azure、Groq、DeepSeek、Kimi（月之暗面）、本地 Ollama（例如 http://localhost:11434/v1）及众多其他服务商使用。翻译请求仅从主进程发送。',
-  'settings.hotkey': '全局划词快捷键',
-  'settings.hotkeyHint': '在任意程序中选中文字后按此快捷键，即可在翻译面板中看到结果。',
+  'settings.hotkey': '全局快捷键',
+  'settings.hotkeyHint': '在任意程序中复制要翻译的文字，再按此快捷键，即可在翻译面板中看到结果。',
   'settings.hotkeyConflict': '快捷键注册失败：{reason}',
   'settings.hotkeySaved': '✓ 快捷键已保存',
   'settings.checkUpdates': '检查更新',
@@ -173,7 +173,7 @@ export const zh: Record<TranslationKey, string> = {
   'settings.historyAutoDeleteDays': '保留天数（超过自动删除）',
   'settings.historyAutoDeleteHint': '应用启动时自动删除超过该天数的记录，设为 0 关闭。',
 
-  'notify.hotkeyResult': '全局划词翻译',
+  'notify.hotkeyResult': '快捷键翻译',
   'onboarding.title': '欢迎使用网文翻译器',
   'onboarding.body': '请在“设置”中配置 API 密钥后开始翻译；也可以开启离线翻译（无需密钥）。',
   'onboarding.goSettings': '去设置',
@@ -222,7 +222,7 @@ export const zh: Record<TranslationKey, string> = {
 
   'main.hotkey.conflictTitle': '快捷键冲突',
   'main.hotkey.registerFailed': '快捷键注册失败，可能被其他应用占用，请在设置中更换快捷键。',
-  'main.hotkey.noSelection': '未检测到选中的文字。请先在其它程序中选中文字，再按快捷键。',
+  'main.hotkey.emptyClipboard': '剪贴板为空，请先复制要翻译的文字，再按快捷键。',
   'main.hotkey.translateFailed': '翻译失败，请稍后重试。',
   'main.hotkey.translateFailedDetail': '翻译失败，请查看日志。',
 
