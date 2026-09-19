@@ -177,11 +177,6 @@ export function validateSaveSettingsPatch(raw: unknown): SaveSettingsPatch {
   );
   if (translateEngine !== undefined) patch.translateEngine = translateEngine;
 
-  const offlineModelDownloaded = optional(o.offlineModelDownloaded, 'offlineModelDownloaded', (v) =>
-    requireBoolean(v, 'offlineModelDownloaded')
-  );
-  if (offlineModelDownloaded !== undefined) patch.offlineModelDownloaded = offlineModelDownloaded;
-
   const lastChapterTitle = optional(o.lastChapterTitle, 'lastChapterTitle', (v) =>
     requireString(v, 'lastChapterTitle', LIMITS.title)
   );

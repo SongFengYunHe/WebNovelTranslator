@@ -152,7 +152,9 @@ export const en = {
   'settings.offlineTitle': 'Offline translation (optional)',
   'settings.offlineToggle': 'Enable offline translation (requires download)',
   'settings.offlineSizeWarning':
-    'The model (~600MB) downloads once when you enable offline mode, then translates without internet (zh/en/ja/ko).',
+    'The model (~870 MB) downloads once when you enable offline mode, then translates without internet (zh/en/ja/ko).',
+  'settings.offlineEngineMissing':
+    'This build does not include the offline translation engine (left out to keep the installer small), so offline mode cannot be enabled. Online translation is unaffected.',
   'settings.offlineDownload': 'Download model',
   'settings.offlineDownloading': 'Downloading… {pct}%',
   'settings.offlineDownloadingMb': 'Downloading model: {loaded}MB / {total}MB',

@@ -313,8 +313,9 @@ export function registerIpcHandlers(ctx: IpcContext): void {
   const startModelDownload = async () => {
     const result = await ensureModel();
     if (result.ok) {
-      // Persist the "downloaded" flag so the badge survives restarts.
-      updateSettings({ offlineModelDownloaded: true, offlineEnabled: true });
+      // `downloaded` is derived from the files on disk, so only the user's
+      // intent needs persisting here.
+      updateSettings({ offlineEnabled: true });
     }
     return getOfflineStatus();
   };

@@ -147,7 +147,9 @@ export const zh: Record<TranslationKey, string> = {
   'settings.offlineTitle': '离线翻译（可选）',
   'settings.offlineToggle': '启用离线翻译（需下载模型）',
   'settings.offlineSizeWarning':
-    '模型约 600MB，仅在首次启用时下载一次。下载完成后无需网络即可翻译（中/英/日/韩）。',
+    '模型约 870MB，仅在首次启用时下载一次。下载完成后无需网络即可翻译（中/英/日/韩）。',
+  'settings.offlineEngineMissing':
+    '当前安装包未包含离线翻译引擎（为控制体积而未打包），因此无法启用离线翻译。在线翻译不受影响。',
   'settings.offlineDownload': '下载模型',
   'settings.offlineDownloading': '下载中… {pct}%',
   'settings.offlineDownloadingMb': '下载模型中: {loaded}MB / {total}MB',

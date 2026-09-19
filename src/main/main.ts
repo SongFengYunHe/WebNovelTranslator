@@ -466,9 +466,15 @@ function startupSanityCheck(): void {
   if (!settings.apiKey && !settings.offlineEnabled) {
     log.info('[startup] no API key configured yet — onboarding banner will be shown in the UI');
   }
-  if (settings.offlineEnabled && !offline.downloaded && !offline.downloading) {
+  if (
+    settings.offlineEnabled &&
+    offline.engineAvailable &&
+    !offline.downloaded &&
+    !offline.downloading
+  ) {
     // The user already opted into offline mode in a previous session; resume
-    // the ~600MB download now that the app is running.
+    // the download now that the app is running. Skipped entirely when this
+    // build has no offline engine — there would be nothing to run it with.
     log.info('[startup] offline mode enabled but model missing — starting download');
     void ensureModel();
   }

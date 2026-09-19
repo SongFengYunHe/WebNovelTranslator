@@ -50,7 +50,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
   offlineEnabled: false,
   // Which engine to translate with; `auto` keeps the previous behaviour.
   translateEngine: 'auto',
-  offlineModelDownloaded: false,
   // Part A2/A5: last chapter title.
   lastChapterTitle: '',
   // 历史自动清理：默认删除超过 90 天的记录，0 表示关闭。
@@ -137,9 +136,6 @@ export function updateSettings(patch: SaveSettingsPatch): SettingsPublic {
   if (typeof patch.hotkey === 'string' && patch.hotkey.trim()) next.hotkey = patch.hotkey.trim();
   if (typeof patch.offlineEnabled === 'boolean') next.offlineEnabled = patch.offlineEnabled;
   if (isTranslateEngine(patch.translateEngine)) next.translateEngine = patch.translateEngine;
-  if (typeof patch.offlineModelDownloaded === 'boolean') {
-    next.offlineModelDownloaded = patch.offlineModelDownloaded;
-  }
   if (typeof patch.lastChapterTitle === 'string') next.lastChapterTitle = patch.lastChapterTitle;
   // 历史自动清理天数：>=0 才允许写入（0 表示关闭）。
   if (typeof patch.historyAutoDeleteDays === 'number' && patch.historyAutoDeleteDays >= 0) {

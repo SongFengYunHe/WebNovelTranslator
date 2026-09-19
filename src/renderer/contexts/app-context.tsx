@@ -100,6 +100,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     downloaded: false,
     progress: null,
     error: null,
+    // Optimistic until the first probe resolves: flashing the "engine missing"
+    // error on every launch would be worse than briefly showing the toggle.
+    engineAvailable: true,
   });
   const [chapterTitle, setChapterTitle] = useState('');
   const [toast, setToast] = useState<Toast | null>(null);
@@ -243,7 +246,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (engine === 'offline') {
           if (!offlineReady) {
             // Guard here rather than calling through: the main process would
-            // start a ~600MB model download as a side effect of translating.
+            // start a ~870 MB model download as a side effect of translating.
             setTranslation({
               originalText: text,
               translatedText: '',

@@ -16,7 +16,7 @@
 - **术语表（Glossary）**：管理自定义术语对，翻译时自动注入提示词，人名、设定词不再翻错。
 - **翻译历史**：基于 SQLite 本地存储，支持全文搜索、分页浏览、查看原文/译文、重新翻译、导出 CSV / JSON、一键清空。
 - **EPUB 导出**：把当前译文（原文+译文对照）导出为 EPUB 电子书。
-- **离线翻译（可选）**：启用后可下载约 600MB 的 `Xenova/nllb-200-distilled-600M` 多语言模型（transformers.js），下载完成后断网也能翻译（中/英/日/韩）。
+- **离线翻译（仅开发版）**：启用后可下载约 870MB 的 `Xenova/nllb-200-distilled-600M` 多语言模型（transformers.js），下载完成后断网也能翻译（中/英/日/韩）。发行版为控制体积未打包推理引擎，设置页会直接禁用该开关并说明原因，不会引导下载。
 - **国产 API 预设**：内置 DeepSeek、Kimi（Moonshot）一键配置，也支持任意 OpenAI 兼容接口（OpenAI、Azure、Groq、Ollama 等）。
 - **自动更新检查**：启动时检查新版本（仅提示，不自动下载），托盘与设置页也可手动检查。
 - **中文界面（默认）**：默认简体中文，可在设置中切换中/英文。
@@ -51,7 +51,7 @@
 - **API 密钥**：在主进程中加密存储，界面永不回显。
 - **基础地址 / 模型**：任意 OpenAI 兼容端点，例如 `https://api.openai.com/v1` + `gpt-4o`、`https://api.deepseek.com/v1` + `deepseek-chat`、`https://api.moonshot.cn/v1` + `moonshot-v1-8k`。
 - **全局快捷键**：点击输入框后按下新的组合键即可录制，保存后立即生效。
-- **离线翻译**：勾选“启用离线翻译”，按提示下载模型（约 600MB，仅一次）；下载完成后翻译工具栏会显示 📴 离线标识。
+- **离线翻译**：勾选“启用离线翻译”，按提示下载模型（约 870MB，仅一次）；下载完成后翻译工具栏会显示 📴 离线标识。该开关仅在包含推理引擎的开发版中可用。
 - **界面语言**：中文 / English。
 
 ### 术语表
@@ -126,7 +126,7 @@ Key features: system-tray + global-hotkey interaction (Ctrl+Shift+Z) that opens 
 
 - **Install**: download the `.exe` from the [Releases](https://github.com/SongFengYunHe/WebNovelTranslator/releases) page.
 - **Unsigned-app note**: SmartScreen may warn; click **More info → Run anyway**.
-- **Offline mode**: only bundled in dev builds (`npm start`) to keep the installer under 80 MB; the ~600 MB model is always downloaded on demand.
+- **Offline mode**: dev builds only (`npm start`) — release installers exclude the inference engine to stay under 80 MB, and the Settings page disables the toggle and says so rather than offering a download it cannot use. The ~870 MB model is always fetched on demand.
 - **Build**: `npm install && npm start` / `npm run dist`.
 
 ---

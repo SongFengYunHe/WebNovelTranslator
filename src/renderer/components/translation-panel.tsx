@@ -27,6 +27,7 @@ export default function TranslationPanel() {
     setChapterTitle,
     progress,
     cancelTranslation,
+    offlineStatus,
   } = useApp();
   const { t } = useI18n();
   const [sourceLang, setSourceLang] = useState(settings?.sourceLang ?? 'zh');
@@ -160,7 +161,9 @@ export default function TranslationPanel() {
           >
             <option value="auto">{t('engine.auto')}</option>
             <option value="online">{t('engine.online')}</option>
-            <option value="offline">{t('engine.offline')}</option>
+            <option value="offline" disabled={!offlineStatus.engineAvailable}>
+              {t('engine.offline')}
+            </option>
           </select>
         </label>
 

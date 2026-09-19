@@ -67,8 +67,6 @@ export interface AppSettings {
   offlineEnabled: boolean;
   /** Which engine translation should use. Defaults to `auto`. */
   translateEngine: TranslateEngine;
-  /** Whether the offline model has been downloaded & cached locally. */
-  offlineModelDownloaded: boolean;
   /** Last chapter title recorded for history entries / EPUB export. */
   lastChapterTitle: string;
   /** 自动清理历史：应用启动时删除超过该天数的记录，0 表示关闭。 */
@@ -95,7 +93,6 @@ export interface SaveSettingsPatch {
   hotkey?: string;
   offlineEnabled?: boolean;
   translateEngine?: TranslateEngine;
-  offlineModelDownloaded?: boolean;
   lastChapterTitle?: string;
   historyAutoDeleteDays?: number;
 }
@@ -174,17 +171,29 @@ export interface HistoryExport {
 
 export interface OfflineStatus {
   enabled: boolean;
-  /** true while the ~600MB model is downloading. */
+  /** true while the ~870 MB model is downloading. */
   downloading: boolean;
   downloaded: boolean;
   /** 0..1 download progress, null when not downloading. */
   progress: number | null;
-  /** Bytes downloaded so far (v3.0.1 runtime download; undefined when idle). */
+  /** Bytes downloaded so far (undefined when idle). */
   loadedBytes?: number;
-  /** Total bytes to download; undefined when unknown/idle. */
+  /**
+   * Total bytes of the WHOLE model, not just the part still pending. Using the
+   * full size keeps the progress denominator stable across repeated attempts.
+   */
   totalBytes?: number;
   /** Human-readable error, null when healthy. */
   error: string | null;
+  /**
+   * Whether the offline translation engine ships in this build.
+   *
+   * `@xenova/transformers` and its native ONNX backend are devDependencies —
+   * release installers exclude them to stay inside the 80 MB size budget, so
+   * offline translation genuinely cannot run there. The UI must never invite a
+   * ~870 MB download it cannot use.
+   */
+  engineAvailable: boolean;
 }
 
 // ---- Auto-update (Part A1) --------------------------------------------------

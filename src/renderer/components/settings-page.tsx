@@ -152,7 +152,7 @@ export default function SettingsPage() {
       await apiSaveSettings({ offlineEnabled: enabled });
       await refreshSettings();
       if (enabled && !offlineStatus.downloaded) {
-        // Start the ~600MB download immediately; progress streams via
+        // Start the ~870 MB download immediately; progress streams via
         // onOfflineProgress (main-process 'offline:progress' events).
         await apiOfflineDownload();
       }
@@ -289,38 +289,50 @@ export default function SettingsPage() {
         {/* ---- Offline translation (Part A4) ---- */}
         <section className="settings-section">
           <h4>{t('settings.offlineTitle')}</h4>
-          <label className="check-row">
-            <input
-              type="checkbox"
-              checked={offlineStatus.enabled}
-              onChange={(e) => void toggleOffline(e.target.checked)}
-            />
-            <span>{t('settings.offlineToggle')}</span>
-          </label>
-          <small className="muted">{t('settings.offlineSizeWarning')}</small>
 
-          {offlineStatus.downloading && (
-            <div className="offline-progress">
-              <div className="progress-track">
-                <div className="progress-fill" style={{ width: `${downloadPct}%` }} />
-              </div>
-              <span>
-                {totalMB > 0
-                  ? t('settings.offlineDownloadingMb', { loaded: loadedMB, total: totalMB })
-                  : t('settings.offlineDownloading', { pct: downloadPct })}
-              </span>
-            </div>
-          )}
-          {!offlineStatus.downloading && offlineStatus.downloaded && (
-            <div className="inline-success">✓ {t('settings.offlineDownloaded')}</div>
-          )}
-          {offlineStatus.error && (
-            <div className="inline-error">⚠ {t('settings.offlineError', { msg: offlineStatus.error })}</div>
-          )}
-          {offlineStatus.enabled && !offlineStatus.downloaded && !offlineStatus.downloading && (
-            <button className="btn small" onClick={() => void apiOfflineDownload()}>
-              {t('settings.offlineDownload')}
-            </button>
+          {/* Release installers exclude the engine to stay inside the size
+              budget. Say so up front rather than letting the user download
+              ~870 MB for a feature that cannot run. */}
+          {!offlineStatus.engineAvailable ? (
+            <div className="inline-error">⚠ {t('settings.offlineEngineMissing')}</div>
+          ) : (
+            <>
+              <label className="check-row">
+                <input
+                  type="checkbox"
+                  checked={offlineStatus.enabled}
+                  onChange={(e) => void toggleOffline(e.target.checked)}
+                />
+                <span>{t('settings.offlineToggle')}</span>
+              </label>
+              <small className="muted">{t('settings.offlineSizeWarning')}</small>
+
+              {offlineStatus.downloading && (
+                <div className="offline-progress">
+                  <div className="progress-track">
+                    <div className="progress-fill" style={{ width: `${downloadPct}%` }} />
+                  </div>
+                  <span>
+                    {totalMB > 0
+                      ? t('settings.offlineDownloadingMb', { loaded: loadedMB, total: totalMB })
+                      : t('settings.offlineDownloading', { pct: downloadPct })}
+                  </span>
+                </div>
+              )}
+              {!offlineStatus.downloading && offlineStatus.downloaded && (
+                <div className="inline-success">✓ {t('settings.offlineDownloaded')}</div>
+              )}
+              {offlineStatus.error && (
+                <div className="inline-error">
+                  ⚠ {t('settings.offlineError', { msg: offlineStatus.error })}
+                </div>
+              )}
+              {offlineStatus.enabled && !offlineStatus.downloaded && !offlineStatus.downloading && (
+                <button className="btn small" onClick={() => void apiOfflineDownload()}>
+                  {t('settings.offlineDownload')}
+                </button>
+              )}
+            </>
           )}
         </section>
 
