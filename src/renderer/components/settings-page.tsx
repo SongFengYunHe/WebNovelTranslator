@@ -180,8 +180,7 @@ export default function SettingsPage() {
   return (
     <div className="panel settings-panel">
       <div className="settings-scroll">
-        <h3>{t('settings.title')}</h3>
-
+        {/* 页面标题即当前标签页名，不再重复一次。 */}
         <div className="form">
           <label className="field">
             <span>{t('settings.provider')}</span>
@@ -190,16 +189,6 @@ export default function SettingsPage() {
               <option value="deepseek">{PROVIDER_PRESETS.deepseek.name}</option>
               <option value="kimi">{PROVIDER_PRESETS.kimi.name}</option>
             </select>
-            <small>{t('settings.providerHint')}</small>
-          </label>
-
-          <label className="field">
-            <span>{t('settings.uiLanguage')}</span>
-            <select value={locale} onChange={(e) => void setLocale(e.target.value as Locale)}>
-              <option value="zh">{t('langs.zh')}</option>
-              <option value="en">{t('langs.en')}</option>
-            </select>
-            <small>{t('settings.uiLanguageHint')}</small>
           </label>
 
           <label className="field">
@@ -212,6 +201,16 @@ export default function SettingsPage() {
               onChange={(e) => setApiKey(e.target.value)}
             />
             <small>{t('settings.apiKeyHint')}</small>
+            {/* 密钥怎么来的，紧跟在需要它的字段旁边，而不是压在页面最底部。 */}
+            <small>{t('settings.howToBody')}</small>
+          </label>
+
+          <label className="field">
+            <span>{t('settings.uiLanguage')}</span>
+            <select value={locale} onChange={(e) => void setLocale(e.target.value as Locale)}>
+              <option value="zh">{t('langs.zh')}</option>
+              <option value="en">{t('langs.en')}</option>
+            </select>
           </label>
 
           <label className="field">
@@ -269,7 +268,6 @@ export default function SettingsPage() {
               onKeyDown={hotkeyCapture ? onHotkeyKeyDown : undefined}
               onFocus={() => setHotkeyCapture(true)}
               onBlur={() => setHotkeyCapture(false)}
-              title={t('settings.hotkeyHint')}
             />
             <button className="btn small" onClick={() => void saveHotkey()}>
               {t('settings.save')}
@@ -344,7 +342,6 @@ export default function SettingsPage() {
               value={autoDeleteDays}
               onChange={(e) => setAutoDeleteDays(e.target.value)}
             />
-            <small>{t('settings.historyAutoDeleteHint')}</small>
           </label>
         </section>
 
@@ -381,11 +378,6 @@ export default function SettingsPage() {
             {typeof testResult.ms === 'number' && ` (${testResult.ms} ms)`}
           </div>
         )}
-
-        <div className="settings-info">
-          <h4>{t('settings.howToTitle')}</h4>
-          <p>{t('settings.howToBody')}</p>
-        </div>
       </div>
 
       {/* v3.0.1：保存 / 测试位于固定在窗口底部的页脚中

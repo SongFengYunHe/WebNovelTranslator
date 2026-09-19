@@ -55,7 +55,6 @@ export const zh: Record<TranslationKey, string> = {
   'result.title': '原文 → 译文',
   'result.copy': '复制译文',
   'result.copied': '✓ 已复制',
-  'glossary.activeChipTitle': '当前术语表已注入提示词',
   'glossary.switchTitle': '切换当前术语表（会注入到每条翻译提示词）',
 
   'browser.statusIdle': '输入小说章节网址以开始。',
@@ -127,9 +126,7 @@ export const zh: Record<TranslationKey, string> = {
 
   'settings.title': '设置',
   'settings.provider': '服务商',
-  'settings.providerHint': '选择预设，或选择“自定义”手动填写。',
   'settings.uiLanguage': '界面语言',
-  'settings.uiLanguageHint': '选择界面显示语言',
   'settings.apiKey': 'API 密钥',
   'settings.apiKeySavedPlaceholder': '••••••••（已保存——留空保持不变）',
   'settings.apiKeyHint': '密钥在主进程中以加密方式存储，绝不会暴露给界面或网页内容。',
@@ -144,9 +141,8 @@ export const zh: Record<TranslationKey, string> = {
   'settings.saveFailed': '保存失败，请重试（详情见日志）。',
   'settings.test': '测试连接',
   'settings.testing': '测试中…',
-  'settings.howToTitle': '如何获取 API 密钥',
   'settings.howToBody':
-    '本应用使用 OpenAI 兼容的 /chat/completions 接口，因此可配合 OpenAI、Azure、Groq、DeepSeek、Kimi（月之暗面）、本地 Ollama（例如 http://localhost:11434/v1）及众多其他服务商使用。翻译请求仅从主进程发送。',
+    '任何 OpenAI 兼容的 /chat/completions 接口都可以：OpenAI、Azure、DeepSeek、Kimi，或本机 Ollama。',
   'settings.hotkey': '全局快捷键',
   'settings.hotkeyHint': '在任意程序中复制要翻译的文字，再按此快捷键，即可在翻译面板中看到结果。',
   'settings.hotkeyConflict': '快捷键注册失败：{reason}',
@@ -167,11 +163,9 @@ export const zh: Record<TranslationKey, string> = {
   'settings.offlineDownloading': '下载中… {pct}%',
   'settings.offlineDownloadingMb': '下载模型中: {loaded}MB / {total}MB',
   'settings.offlineDownloaded': '✓ 模型已就绪',
-  'settings.offlineActive': '离线翻译已启用。',
   'settings.offlineError': '下载失败：{msg}',
   'settings.historyAutoDelete': '自动清理历史记录',
-  'settings.historyAutoDeleteDays': '保留天数（超过自动删除）',
-  'settings.historyAutoDeleteHint': '应用启动时自动删除超过该天数的记录，设为 0 关闭。',
+  'settings.historyAutoDeleteDays': '保留天数（0 = 关闭）',
 
   'notify.hotkeyResult': '快捷键翻译',
   'onboarding.title': '欢迎使用网文翻译器',

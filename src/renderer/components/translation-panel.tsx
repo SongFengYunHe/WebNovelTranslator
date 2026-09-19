@@ -18,7 +18,6 @@ export default function TranslationPanel() {
   const {
     settings,
     glossaries,
-    activeGlossary,
     refreshSettings,
     translation,
     translateText,
@@ -118,9 +117,9 @@ export default function TranslationPanel() {
         </label>
 
         {/* v3.0.0：术语表是核心功能——可直接在翻译工具栏切换当前术语表，
-            无需离开本标签页。 */}
+            无需离开本标签页。select 本身已显示当前项，不再额外挂一个同名徽标。 */}
         <label className="pair glossary-switch" title={t('glossary.switchTitle')}>
-          <span className="pair-label">📖 {t('glossary.active')}</span>
+          <span className="pair-label">{t('glossary.active')}</span>
           <select
             className="glossary-select"
             value={settings?.activeGlossaryId ?? ''}
@@ -136,21 +135,11 @@ export default function TranslationPanel() {
             ))}
           </select>
         </label>
-        {activeGlossary && (
-          <span className="chip" title={t('glossary.activeChipTitle')}>
-            ✓ {activeGlossary.name}
-          </span>
-        )}
-        {translation.engine === 'offline' && (
-          <span className="chip offline-chip" title={t('settings.offlineActive')}>
-            📴 {t('settings.offlineActive')}
-          </span>
-        )}
 
         {/* 使用哪个引擎。过去这是静默决定的，只要存在 API 密钥，
             「启用离线」开关就会被忽略。 */}
         <label className="pair" title={t('engine.hint')}>
-          <span className="pair-label">⚙ {t('engine.label')}</span>
+          <span className="pair-label">{t('engine.label')}</span>
           <select
             value={settings?.translateEngine ?? 'auto'}
             onChange={(e) => {
@@ -196,6 +185,13 @@ export default function TranslationPanel() {
           placeholder={t('translate.inputPlaceholder')}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
+          // Ctrl/⌘ + Enter 直接翻译，省去鼠标往返。
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+              e.preventDefault();
+              handleTranslate();
+            }
+          }}
         />
       </div>
 
@@ -211,12 +207,15 @@ export default function TranslationPanel() {
         <div className="result-area">
           <div className="result-header">
             <div className="result-title">{t('result.title')}</div>
-            <button className="btn small" onClick={() => void handleExportEpub()} disabled={exporting}>
-              {exporting ? t('translate.epubExporting') : t('translate.epubExport')}
-            </button>
-            <button className="btn small" onClick={handleCopy}>
-              {copied ? t('result.copied') : t('result.copy')}
-            </button>
+            {/* 两个动作成组靠右，避免在 space-between 下被摊到标题与右缘之间。 */}
+            <div className="result-actions">
+              <button className="btn small" onClick={() => void handleExportEpub()} disabled={exporting}>
+                {exporting ? t('translate.epubExporting') : t('translate.epubExport')}
+              </button>
+              <button className="btn small" onClick={handleCopy}>
+                {copied ? t('result.copied') : t('result.copy')}
+              </button>
+            </div>
           </div>
           <div className="side-by-side">
             {Array.from({ length: rowCount }, (_, i) => (

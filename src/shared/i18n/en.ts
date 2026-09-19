@@ -59,7 +59,6 @@ export const en = {
   'result.title': 'Original → Translation',
   'result.copy': 'Copy translation',
   'result.copied': '✓ Copied',
-  'glossary.activeChipTitle': 'Active glossary injected into the prompt',
   'glossary.switchTitle': 'Switch the active glossary (injected into every translation prompt)',
 
   'browser.statusIdle': 'Enter a novel chapter URL to begin.',
@@ -133,9 +132,7 @@ export const en = {
 
   'settings.title': 'Settings',
   'settings.provider': 'Provider',
-  'settings.providerHint': 'Pick a preset, or choose Custom to enter details manually.',
   'settings.uiLanguage': 'Interface language',
-  'settings.uiLanguageHint': 'Choose the UI display language',
   'settings.apiKey': 'API Key',
   'settings.apiKeySavedPlaceholder': '•••••••• (saved — leave blank to keep it)',
   'settings.apiKeyHint':
@@ -152,9 +149,8 @@ export const en = {
   'settings.saveFailed': 'Could not save — please try again (see the log for details).',
   'settings.test': 'Test connection',
   'settings.testing': 'Testing…',
-  'settings.howToTitle': 'How to get an API key',
   'settings.howToBody':
-    'The app speaks the OpenAI-compatible /chat/completions API, so it works with OpenAI, Azure, Groq, DeepSeek, Kimi (Moonshot), local Ollama (e.g. http://localhost:11434/v1) and many other providers. Translation requests are sent from the main process only.',
+    'Any OpenAI-compatible /chat/completions endpoint works — OpenAI, Azure, DeepSeek, Kimi, or a local Ollama.',
   'settings.hotkey': 'Global hotkey',
   'settings.hotkeyHint':
     'Copy the text you want to translate in any app, then press this shortcut.',
@@ -176,11 +172,9 @@ export const en = {
   'settings.offlineDownloading': 'Downloading… {pct}%',
   'settings.offlineDownloadingMb': 'Downloading model: {loaded}MB / {total}MB',
   'settings.offlineDownloaded': '✓ Model ready',
-  'settings.offlineActive': 'Offline translation is enabled.',
   'settings.offlineError': 'Download failed: {msg}',
   'settings.historyAutoDelete': 'Auto-clean history',
-  'settings.historyAutoDeleteDays': 'Days to keep (auto-delete older)',
-  'settings.historyAutoDeleteHint': 'Automatically delete records older than this many days at startup. Set to 0 to disable.',
+  'settings.historyAutoDeleteDays': 'Days to keep (0 = off)',
 
   'notify.hotkeyResult': 'Hotkey translation',
   'onboarding.title': 'Welcome to Floating Web Novel Translator',

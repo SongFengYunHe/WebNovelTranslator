@@ -189,8 +189,10 @@ export default function BrowserView() {
         <button className="btn" onClick={extract}>
           {t('browser.extract')}
         </button>
+        {/* 本页的主要动作是「打开」；发送是紧随其后的次要动作，
+            因此不再用第二种强调色与它争夺注意力。 */}
         <button
-          className="btn accent"
+          className="btn"
           onClick={sendToTranslate}
           disabled={!extracted.trim()}
           title={t('browser.sendToTranslatorTitle')}
