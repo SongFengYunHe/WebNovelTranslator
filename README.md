@@ -2,7 +2,7 @@
 
 一个常驻系统托盘的网文翻译小工具，基于 **Electron + React + TypeScript** 构建。
 
-在浏览器里选中外文小说段落，按下全局快捷键 `Ctrl+Shift+Z`（或点击托盘图标），即可打开翻译窗口获得即时翻译；也可以整章提取、对照阅读、导出 EPUB 电子书。所有 API 密钥在主进程中加密存储，绝不暴露给界面。
+复制外文小说段落后按下全局快捷键 `Ctrl+Shift+Z`（或点击托盘图标），即可打开翻译窗口获得即时翻译；也可以整章提取、对照阅读、导出 EPUB 电子书。所有 API 密钥在主进程中加密存储，绝不暴露给界面。
 
 > ⚠️ **未签名应用提示**：当前安装包未进行代码签名，Windows SmartScreen 可能弹出蓝色提示。请点击 **“更多信息” → “仍要运行”** 即可正常使用。介意的话可自行在本地对安装包签名。
 
@@ -11,15 +11,16 @@
 ## ✨ 功能特性
 
 - **托盘 + 快捷键交互**：应用常驻系统托盘，托盘菜单提供“显示 / 隐藏面板”与“退出”；按全局快捷键即可唤起无边框翻译窗口。窗口**不会**因失焦自动隐藏，收起请点右上角 **✕** 或使用托盘菜单。
-- **全局划词翻译**：在任意程序中选中文字，按 `Ctrl+Shift+Z`（可在设置中修改），自动复制、翻译并在弹出窗口中显示结果。
-- **浏览器标签页**：内置网页浏览器，输入章节网址即可提取正文，一键发送到翻译器。
+- **全局快捷键翻译**：在任意程序中复制文字，按 `Ctrl+Shift+Z`（可在设置中修改），译文立即出现在弹出窗口中。
+- **浏览器标签页**：内置网页浏览器，输入章节网址即可提取正文（Mozilla Readability 识别正文，站点选择器兜底），一键发送到翻译器。
 - **术语表（Glossary）**：管理自定义术语对，翻译时自动注入提示词，人名、设定词不再翻错。
 - **翻译历史**：基于 SQLite 本地存储，支持全文搜索、分页浏览、查看原文/译文、重新翻译、导出 CSV / JSON、一键清空。
 - **EPUB 导出**：把当前译文（原文+译文对照）导出为 EPUB 电子书。
-- **离线翻译（仅开发版）**：启用后可下载约 870MB 的 `Xenova/nllb-200-distilled-600M` 多语言模型（transformers.js），下载完成后断网也能翻译（中/英/日/韩）。发行版为控制体积未打包推理引擎，设置页会直接禁用该开关并说明原因，不会引导下载。
+- **离线翻译（可选）**：下载完约 870MB 的 `Xenova/nllb-200-distilled-600M` 多语言模型（transformers.js）后，断网也能翻译（中/英/日/韩）。**离线版**安装包自带推理引擎；标准版为控制体积不含引擎，设置页会直接禁用该开关并说明原因，绝不引导用户白下 870MB。
 - **国产 API 预设**：内置 DeepSeek、Kimi（Moonshot）一键配置，也支持任意 OpenAI 兼容接口（OpenAI、Azure、Groq、Ollama 等）。
 - **自动更新检查**：启动时检查新版本（仅提示，不自动下载），托盘与设置页也可手动检查。
-- **中文界面（默认）**：默认简体中文，可在设置中切换中/英文。
+- **中文界面（默认）**：默认简体中文，可在设置中立即切换中/英文——原生菜单、托盘与错误提示一并跟随，无需重启。
+- **跟随系统深浅色**：界面提供浅色与暗色两套配色，随操作系统外观设置自动切换。
 - **窗口记忆**：记住主窗口的位置、大小，下次启动自动还原。
 - **干净退出**：退出时销毁所有窗口、关闭数据库、注销全局快捷键，不留后台进程。
 
@@ -31,10 +32,10 @@
 
 | 文件 | 版本 | 形态 | 体积 |
 | --- | --- | --- | --- |
-| `WebNovelTranslator-Setup-<版本号>.exe` | 标准版 | 安装版（可自定义目录、建桌面快捷方式） | 约 71 MB |
-| `WebNovelTranslator-<版本号>-portable.exe` | 标准版 | 免安装便携版 | 约 71 MB |
-| `WebNovelTranslator-Offline-Setup-<版本号>.exe` | **离线版** | 安装版 | 约 84 MB |
-| `WebNovelTranslator-Offline-<版本号>-portable.exe` | **离线版** | 免安装便携版 | 约 84 MB |
+| `WebNovelTranslator-Setup-<版本号>.exe` | 标准版 | 安装版（可自定义目录、建桌面快捷方式） | 约 69 MB |
+| `WebNovelTranslator-<版本号>-portable.exe` | 标准版 | 免安装便携版 | 约 69 MB |
+| `WebNovelTranslator-Offline-Setup-<版本号>.exe` | **离线版** | 安装版 | 约 82 MB |
+| `WebNovelTranslator-Offline-<版本号>-portable.exe` | **离线版** | 免安装便携版 | 约 82 MB |
 
 1. 双击运行。若出现 SmartScreen 提示，点击 **更多信息 → 仍要运行**（安装包未做代码签名）。
 2. 首次启动请在 **设置** 页配置 API 密钥，即可开始使用。
@@ -61,9 +62,9 @@
 
 | 操作 | 方法 |
 | --- | --- |
-| 翻译一段文字 | 把文字粘贴到“翻译”页，选择语言，点击 **翻译** |
+| 翻译一段文字 | 把文字粘贴到“翻译”页，选择语言，点击 **翻译**（或按 `Ctrl/⌘ + Enter`） |
 | 翻译浏览器里的章节 | “浏览器”页输入网址 → 打开 → **提取文本** → **发送到翻译器** |
-| 全局划词翻译 | 在任意程序中选中文字 → 按 `Ctrl+Shift+Z` |
+| 全局快捷键翻译 | 在任意程序中复制文字 → 按 `Ctrl+Shift+Z` |
 | 打开 / 收起翻译窗口 | 按全局快捷键，或点击托盘图标 → **显示 / 隐藏面板**；点击窗口右上角 **✕** 收起 |
 | 导出 EPUB | 翻译完成后点击 **导出 EPUB**，或到“历史”页查看详情后导出 |
 
@@ -72,8 +73,8 @@
 - **服务商**：选择预设（DeepSeek / Kimi）自动填充接口地址与模型，或选“自定义”手动填写。
 - **API 密钥**：在主进程中加密存储，界面永不回显。
 - **基础地址 / 模型**：任意 OpenAI 兼容端点，例如 `https://api.openai.com/v1` + `gpt-4o`、`https://api.deepseek.com/v1` + `deepseek-chat`、`https://api.moonshot.cn/v1` + `moonshot-v1-8k`。
-- **全局快捷键**：点击输入框后按下新的组合键即可录制，保存后立即生效。
-- **离线翻译**：勾选“启用离线翻译”，按提示下载模型（约 870MB，仅一次）；下载完成后翻译工具栏会显示 📴 离线标识。该开关仅在包含推理引擎的开发版中可用。
+- **全局快捷键**：点击输入框后按下新的组合键即可录制，保存后立即生效。按下快捷键时翻译的是**剪贴板里已有的文字**（先复制、再按快捷键）。
+- **离线翻译**：勾选“启用离线翻译”，按提示下载模型（约 870MB，仅一次）；翻译工具栏的「引擎」下拉切到「离线」即走本地模型。该开关仅在包含推理引擎的离线版中可用。
 - **界面语言**：中文 / English。
 
 ### 术语表
@@ -120,8 +121,18 @@ npm run dist:offline
 
 | 产物 | 体积 | 说明 |
 | --- | --- | --- |
-| `WebNovelTranslator-Setup-*.exe` | 约 71 MB | 标准版，不含推理引擎 |
-| `WebNovelTranslator-Offline-Setup-*.exe` | 约 84 MB | 离线版，含推理引擎 |
+| `WebNovelTranslator-Setup-*.exe` | 约 69 MB | 标准版，不含推理引擎 |
+| `WebNovelTranslator-Offline-Setup-*.exe` | 约 82 MB | 离线版，含推理引擎 |
+
+两个版本的体积几乎全部来自 Electron 自身（解包后约 230 MB，Chromium 语言包已
+裁到只剩 `en-US` / `zh-CN`）。真正能压的是 app.asar：v3.1.0 把散落在各处的
+开发产物清掉后，标准版的 asar 从 21.8 MB 降到 **9.8 MB**（约 −12 MB），
+安装包随之瘦身约 2.5 MB。裁减清单见 `scripts/packaging-shared.js`：
+
+- better-sqlite3 的 C 源码与头文件（9.3 MB）只在编译期用得到；
+- 只被离线引擎用到的旁支依赖（`protobufjs`、`onnx-proto`、`sharp` 的着色工具链等），
+  名单由 `package-lock.json` 的依赖闭包推出，不是凭感觉列的；
+- 各包内的测试、示例、文档与 CoffeeScript 源文件。
 
 标准版为控制体积**不分发离线推理引擎**（`@xenova/transformers` 及其运行时），
 所以安装包里的「离线翻译」开关会被明确禁用并说明原因，**不会引导用户下载 870 MB
@@ -129,9 +140,8 @@ npm run dist:offline
 
 离线版把引擎打进包里，代价只有 **约 13 MB**：打包时会裁掉引擎中与 Windows x64
 运行无关的部分（浏览器端产物、非 Windows 平台二进制、浏览器 WASM 后端，合计约
-163 MB，名单见 `scripts/packaging-shared.js`）。每一项裁减都经过实测——全部裁掉后
-`import('@xenova/transformers')` 与 `onnxruntime-node` 的 `InferenceSession`
-仍可正常加载。
+163 MB）。每一项裁减都经过实测——两个版本都用打包后的可执行文件跑过
+`--smoke-test`：标准版如实报告引擎缺失，离线版的 ESM 引擎与 ONNX 会话均能真实加载。
 
 模型本体（约 870 MB）在两个版本里都始终按需下载到用户数据目录，不占用安装包体积。
 
@@ -165,13 +175,14 @@ npm run dist:offline
 
 ## English
 
-**Floating Web Novel Translator** — a tray-driven web-novel translator built with Electron + React (v3.0.0).
+**Floating Web Novel Translator** — a tray-driven web-novel translator built with Electron + React (v3.1.0).
 
 Key features: system-tray + global-hotkey interaction (Ctrl+Shift+Z) that opens a stable frameless popup window, glossary as a first-class feature (switch the active glossary right from the translate toolbar), built-in chapter extractor, SQLite translation history (search / export CSV·JSON), EPUB export, optional offline translation via `transformers.js` (NLLB-200), presets for DeepSeek / Kimi (Moonshot), auto-update check, Chinese (default) / English UI, window-state persistence, and clean exit with no lingering processes.
 
 - **Install**: download the `.exe` from the [Releases](https://github.com/SongFengYunHe/WebNovelTranslator/releases) page.
 - **Unsigned-app note**: SmartScreen may warn; click **More info → Run anyway**.
-- **Offline mode**: dev builds only (`npm start`) — release installers exclude the inference engine to stay under 80 MB, and the Settings page disables the toggle and says so rather than offering a download it cannot use. The ~870 MB model is always fetched on demand.
+- **Hotkey**: copy the text you want to translate, then press the shortcut — the shortcut translates the clipboard.
+- **Offline mode**: the **Offline** installer bundles the inference engine; the standard installer excludes it to stay small and disables the toggle with an explanation instead of offering a download it cannot use. The ~870 MB model is always fetched on demand.
 - **Build**: `npm install && npm start` / `npm run dist`.
 
 ---
