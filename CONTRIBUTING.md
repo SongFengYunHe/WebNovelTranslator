@@ -13,9 +13,9 @@ src/
 │   ├── contexts/       # 全局上下文
 │   ├── hooks/          # 自定义 React Hooks
 │   ├── services/       # API 服务封装
-│   ├── i18n/           # 中英文文案
 │   └── styles/         # 样式
 └── shared/             # 主进程 / 渲染进程共享的类型与工具
+    └── i18n/           # 中英文文案（主进程与渲染进程共用）
 ```
 
 ### 文件命名约定
@@ -25,7 +25,9 @@ src/
 
 ### 其他约定
 
-- 所有新的用户可见文案必须同时加入 `src/renderer/i18n/zh.ts` 与 `en.ts`（键保持一致）。
+- 所有新的用户可见文案必须同时加入 `src/shared/i18n/zh.ts` 与 `en.ts`（键保持一致）。
+  渲染进程用 `useI18n()`，主进程用 `src/main/i18n.ts` 的 `mt()`；两类前缀分别是
+  `main.*`（原生菜单、托盘、对话框、主进程错误）与其余键（界面文案）。
 - 错误处理统一使用 `electron-log` 记录到 `<userData>/logs/main.log`，不要在运行时使用 `console.log`。
 - 提交前请确保 `npm run build` 通过。
 

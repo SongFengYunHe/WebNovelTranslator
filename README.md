@@ -147,10 +147,10 @@ npm run dist:offline
 
 - 格式：`<type>(<scope>): <description>`
 - 常用 type：`feat` / `fix` / `chore` / `docs` / `style` / `refactor` / `perf` / `test`
-- scope 可选但推荐（如 `bubble`、`settings`、`history`）
+- scope 可选但推荐（如 `translate`、`offline`、`settings`、`history`、`ui`）
 - 描述简明，中文或英文均可，保持统一
 
-示例：`feat(translator): 增加离线翻译支持`、`fix(bubble): 修复悬浮球拖出屏幕的问题`
+示例：`feat(translate): 增加离线翻译支持`、`fix(ui): 修复设置页在小窗口下的溢出`
 
 > 发布（GitHub Releases）请使用 Tag `vX.Y.Z` + 标题 `vX.Y.Z - 简短中文描述`，
 > 发布说明按 **新功能 / 修复 / 优化 / 已知问题** 编写，模板见 [`RELEASE_TEMPLATE.md`](./RELEASE_TEMPLATE.md)。
@@ -158,7 +158,7 @@ npm run dist:offline
 ### 开发约定
 
 - 主进程逻辑全部放在 `src/main/`（后台服务在 `src/main/services/`），渲染进程 UI 在 `src/renderer/`，共享类型/提示词构建在 `src/shared/`。
-- 所有新的用户可见文案必须同时加入 `src/renderer/i18n/zh.ts` 与 `en.ts`（键保持一致）。
+- 所有新的用户可见文案必须同时加入 `src/shared/i18n/zh.ts` 与 `en.ts`（键保持一致）；该词典主进程与渲染进程共用，主进程侧用 `src/main/i18n.ts` 的 `mt()` 取文案。
 - 错误处理统一使用 `electron-log` 记录到 `<userData>/logs/main.log`。
 
 ---
