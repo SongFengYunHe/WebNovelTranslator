@@ -1,8 +1,8 @@
 /**
- * GlossaryEditor - full CRUD for glossaries:
- *  - create / rename / delete multiple glossaries
- *  - each glossary has a simple editable table of source -> target pairs
- *  - active glossary selector (injected into the translation prompt)
+ * GlossaryEditor —— 术语表的完整 CRUD：
+ *  - 创建 / 重命名 / 删除多个术语表
+ *  - 每个术语表都有一张简单的、可编辑的 source -> target 对照表
+ *  - 当前术语表选择器（注入到翻译提示词中）
  */
 import React, { useCallback, useEffect, useState } from 'react';
 import { useApp } from '../contexts/app-context';
@@ -28,12 +28,12 @@ export default function GlossaryEditor() {
 
   const selected = glossaries.find((g) => g.id === selectedId) ?? null;
 
-  // Auto-select the first glossary on first load.
+  // 首次加载时自动选中第一个术语表。
   useEffect(() => {
     if (!selectedId && glossaries.length > 0) setSelectedId(glossaries[0].id);
   }, [glossaries, selectedId]);
 
-  // Load entries when selection changes.
+  // 选中项变化时加载条目。
   useEffect(() => {
     const g = glossaries.find((x) => x.id === selectedId);
     if (g) setEntries(g.entries.map((e) => ({ ...e })));
@@ -96,7 +96,7 @@ export default function GlossaryEditor() {
   return (
     <div className="panel glossary-panel">
       <div className="glossary-layout">
-        {/* -------- Glossary list -------- */}
+        {/* -------- 术语表列表 -------- */}
         <aside className="glossary-sidebar">
           <h3>{t('glossary.title')}</h3>
 
@@ -182,7 +182,7 @@ export default function GlossaryEditor() {
           </div>
         </aside>
 
-        {/* -------- Entry table -------- */}
+        {/* -------- 条目表格 -------- */}
         <section className="glossary-editor">
           <div className="editor-header">
             <h3>{selected ? selected.name : t('glossary.noSelection')}</h3>
@@ -212,7 +212,7 @@ export default function GlossaryEditor() {
                     <td>
                       <input
                         value={entry.source}
-                        placeholder="例如：火球术"
+                        placeholder={t('glossary.sourcePlaceholder')}
                         onChange={(e) => updateEntry(i, 'source', e.target.value)}
                       />
                     </td>
@@ -220,7 +220,7 @@ export default function GlossaryEditor() {
                     <td>
                       <input
                         value={entry.target}
-                        placeholder="例如：火球术的译文"
+                        placeholder={t('glossary.targetPlaceholder')}
                         onChange={(e) => updateEntry(i, 'target', e.target.value)}
                       />
                     </td>

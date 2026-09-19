@@ -1,4 +1,4 @@
-/* ---- Global app styles (main panel) ---- */
+/* ---- 全局应用样式（主面板）---- */
 :root {
   --bg: #f5f6fa;
   --surface: #ffffff;
@@ -37,9 +37,9 @@ body {
   height: 100%;
 }
 
-/* ---- Header / tabs ---- */
-/* v3.0.0: the window is frameless, so the header doubles as the drag region.
-   Every interactive element inside must opt out with `no-drag`. */
+/* ---- 页头 / 标签页 ---- */
+/* v3.0.0：窗口是无边框的，因此页头同时充当即拖动区域。
+   其中的每个交互元素都必须用 `no-drag` 选择退出拖动。 */
 .app-header {
   display: flex;
   align-items: center;
@@ -114,7 +114,7 @@ body {
   color: var(--text);
 }
 
-/* Frameless-window control buttons in the header (v3.0.0). */
+/* 页头中的无边框窗口控制按钮（v3.0.0）。 */
 .window-btn {
   width: 30px;
   height: 30px;
@@ -132,7 +132,7 @@ body {
   color: #fff;
 }
 
-/* Glossary switcher in the translate toolbar (v3.0.0). */
+/* 翻译工具栏中的术语表切换器（v3.0.0）。 */
 .glossary-switch {
   cursor: help;
 }
@@ -141,7 +141,7 @@ body {
   max-width: 180px;
 }
 
-/* ---- Body / panels ---- */
+/* ---- 主体 / 面板 ---- */
 .app-body {
   flex: 1;
   overflow: auto;
@@ -159,7 +159,7 @@ body {
   height: 100%;
 }
 
-/* ---- Toolbar ---- */
+/* ---- 工具栏 ---- */
 .toolbar {
   display: flex;
   align-items: center;
@@ -202,7 +202,7 @@ textarea:focus {
   box-shadow: 0 0 0 3px rgba(79, 110, 247, 0.15);
 }
 
-/* ---- Buttons ---- */
+/* ---- 按钮 ---- */
 .btn {
   border: 1px solid var(--border);
   background: #fff;
@@ -267,7 +267,7 @@ textarea:focus {
   gap: 4px;
 }
 
-/* ---- Translate panel ---- */
+/* ---- 翻译面板 ---- */
 .error-banner {
   background: #fdeceb;
   color: #b23a30;
@@ -345,7 +345,7 @@ textarea:focus {
   border-color: #d6e1ff;
 }
 
-/* ---- Browser panel ---- */
+/* ---- 浏览器面板 ---- */
 .browser-panel {
   overflow: hidden;
 }
@@ -419,7 +419,7 @@ textarea:focus {
   line-height: 1.6;
 }
 
-/* ---- Glossary panel ---- */
+/* ---- 术语表面板 ---- */
 .glossary-panel {
   height: 100%;
   overflow: hidden;
@@ -598,12 +598,10 @@ code {
   font-size: 12px;
 }
 
-/* ---- Settings panel ---- */
-/* v3.0.1: the settings container covers the whole window (height 100vh,
-   overflow hidden, gray background). `max-height: 100%` clamps it to the area
-   below the fixed app header so the pinned footer never gets clipped. Form
-   content scrolls inside `.settings-scroll`; the Save/Test bar is pinned to
-   the bottom. */
+/* ---- 设置面板 ---- */
+/* v3.0.1：设置容器覆盖整个窗口（height 100vh、overflow hidden、灰色背景）。
+   `max-height: 100%` 把它限制在固定页头下方的区域内，使固定的页脚绝不会被裁切。
+   表单内容在 `.settings-scroll` 内滚动；保存/测试栏固定在底部。 */
 .settings-panel {
   height: 100vh;
   max-height: 100%;
@@ -616,9 +614,8 @@ code {
   max-width: none;
 }
 
-/* Scrollable middle area: every input field, section and description lives
-   here. `flex: 1` makes it absorb all leftover height between the top of the
-   window and the fixed footer below. */
+/* 可滚动的中间区域：每个输入框、分区与说明都位于此处。
+   `flex: 1` 使它吸收窗口顶部与下方固定页脚之间的全部剩余高度。 */
 .settings-scroll {
   flex: 1;
   overflow-y: auto;
@@ -626,8 +623,8 @@ code {
   min-height: 0;
 }
 
-/* v3.0.0: fields and descriptions are laid out as a single vertical flex
-   column so inputs never float over the gray page background. */
+/* v3.0.0：字段与说明按单个纵向 flex 列排布，
+   使输入框绝不会浮在灰色页面背景之上。 */
 .form {
   display: flex;
   flex-direction: column;
@@ -657,9 +654,9 @@ code {
   gap: 14px;
 }
 
-/* Save / Test actions: fixed footer pinned to the bottom of the window.
-   `flex-shrink: 0` keeps it from being squeezed or scrolling away with the
-   content; the white background + top border separate it from the scroll area. */
+/* 保存 / 测试操作：固定在窗口底部的页脚。
+   `flex-shrink: 0` 使它不会被挤压缩、也不会随内容滚走；白色背景 + 上边框
+   把它与滚动区域分隔开。 */
 .settings-actions {
   display: flex;
   gap: 10px;
@@ -703,7 +700,7 @@ code {
   color: var(--text);
 }
 
-/* ---- Settings v2 sections (provider / hotkey / offline / updates) ---- */
+/* ---- 设置页 v2 分区（服务商 / 快捷键 / 离线 / 更新）---- */
 .settings-section {
   margin-top: 22px;
   border-top: 1px solid var(--border);
@@ -779,7 +776,7 @@ code {
   transition: width 0.2s ease;
 }
 
-/* ---- History panel ---- */
+/* ---- 历史记录面板 ---- */
 .history-panel {
   overflow: auto;
 }
@@ -862,7 +859,7 @@ code {
   font-size: 13px;
 }
 
-/* ---- Modal (history detail) ---- */
+/* ---- 弹窗（历史详情）---- */
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -948,7 +945,7 @@ code {
   justify-content: flex-end;
 }
 
-/* ---- Translate panel v2 ---- */
+/* ---- 翻译面板 v2 ---- */
 .chapter-input {
   width: 100%;
   margin-bottom: 8px;
@@ -960,7 +957,7 @@ code {
   border-color: #bfe8d5;
 }
 
-/* ---- Toast (main-process notifications) ---- */
+/* ---- Toast（主进程通知）---- */
 .toast {
   position: fixed;
   bottom: 18px;
@@ -1000,23 +997,21 @@ code {
   }
 }
 
-/* ---- Onboarding banner ---- */
+/* ---- 引导横幅 ---- */
 /* 悬浮横幅显示时给主内容留出底部空间，避免遮挡滚动内容（不产生溢出）。 */
 .app-body.with-banner {
   padding-bottom: 76px;
 }
 
-/* P1: subsystem health banner, pinned between the header and the scrolling
-   body. `.error-banner` supplies the colours; this only adds the outer spacing
-   the scroll container would otherwise provide. */
+/* P1：子系统健康状态横幅，固定在页头与滚动主体之间。
+   `.error-banner` 提供配色；这里只补上滚动容器原本会提供的外边距。 */
 .health-banner {
   margin: 12px 16px 0;
   flex-shrink: 0;
 }
 
-/* v3.0.1: on the Settings tab the page manages its own scrolling (scrollable
-   middle + fixed footer), so the body becomes a flush, non-scrolling flex
-   container and the panel stretches to cover the entire window content area. */
+/* v3.0.1：在设置标签页中，页面自行管理滚动（可滚动中间区 + 固定页脚），
+   因此主体变成一个齐平、不滚动的 flex 容器，面板则拉伸以覆盖整个窗口内容区。 */
 .app-body.is-settings {
   padding: 0;
   overflow: hidden;
@@ -1046,7 +1041,7 @@ code {
   line-height: 1.5;
 }
 
-/* ---- Danger button variant ---- */
+/* ---- 危险按钮变体 ---- */
 .btn.danger {
   border-color: var(--danger);
   color: var(--danger);

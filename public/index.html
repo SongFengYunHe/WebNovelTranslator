@@ -3,14 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <!--
-      Renderer policy. Notes:
-      - style-src keeps 'unsafe-inline' because React writes inline `style`
-        attributes (the offline-download progress bar); removing it breaks that.
-      - frame-src is https:-only: the Browser tab's <webview> is the only frame,
-        and non-HTTPS attach is refused in the main process as well.
-      - frame-ancestors / sandbox are intentionally absent — those directives are
-        ignored when delivered via <meta>, so claiming them would imply
-        protection that is not actually applied.
+      渲染进程策略。说明：
+      - style-src 保留 'unsafe-inline'，因为 React 会写入行内 `style` 属性
+        （离线下载进度条）；移除它会破坏该功能。
+      - frame-src 仅允许 https:：浏览器标签页的 <webview> 是唯一的 frame，
+        且主进程同样会拒绝非 HTTPS 的附着。
+      - frame-ancestors / sandbox 被有意省略——这些指令经 <meta> 传递时会被忽略，
+        声明它们只会暗示一种实际上并未生效的保护。
     -->
     <meta
       http-equiv="Content-Security-Policy"

@@ -1,11 +1,11 @@
 /**
- * Global app state via React Context:
- *  - settings (public view, no API key)
- *  - glossaries + active glossary
- *  - active tab
- *  - translation state + orchestration (online with offline fallback)
- *  - offline translation status (Part A4)
- *  - transient toasts pushed from the main process (Part E3)
+ * 通过 React Context 管理全局应用状态：
+ *  - 设置（公开视图，不含 API 密钥）
+ *  - 术语表 + 当前术语表
+ *  - 当前标签页
+ *  - 翻译状态 + 编排（在线优先、离线兜底）
+ *  - 离线翻译状态（A4 部分）
+ *  - 由主进程推送的瞬时 toast（E3 部分）
  *
  * 全局状态中枢：集中管理设置、术语表、翻译流程（在线优先、离线兜底）
  * 以及主进程推送的通知/进度事件，供各页面共享。
@@ -30,7 +30,7 @@ import { useI18n } from './i18n-context';
 import { apiCancelTranslate, apiSystemHealth } from '../services/api';
 import { buildSystemPrompt } from '../../shared/prompt-builder';
 
-/** Language options; labels are i18n keys rendered through `t()` in the UI. */
+/** 语言选项；其标签是 i18n 键，在界面中通过 `t()` 渲染。 */
 export const LANGUAGES: { code: string; labelKey: TranslationKey }[] = [
   { code: 'zh', labelKey: 'langs.zh' },
   { code: 'en', labelKey: 'langs.en' },
@@ -45,7 +45,7 @@ export interface TranslationState {
   translatedText: string;
   translating: boolean;
   error: string | null;
-  /** Which engine produced the result, for display. */
+  /** 产生该结果的引擎，用于显示。 */
   engine?: 'online' | 'offline';
 }
 
@@ -69,7 +69,7 @@ interface AppContextValue {
   setTab: (t: TabId) => void;
   translation: TranslationState;
   offlineStatus: OfflineStatus;
-  /** Main-process subsystem health; null until the first probe resolves. */
+  /** 主进程子系统健康状况；在首次探测完成前为 null。 */
   health: SystemHealth | null;
   chapterTitle: string;
   setChapterTitle: (title: string) => void;
@@ -80,9 +80,9 @@ interface AppContextValue {
   translateText: (text: string, sourceLang: string, targetLang: string) => Promise<void>;
   loadTextIntoTranslator: (text: string) => void;
   clearTranslation: () => void;
-  /** Chunk progress for the running job; null when idle or single-chunk. */
+  /** 运行中任务的分块进度；空闲或单分块时为 null。 */
   progress: TranslateProgress | null;
-  /** Abort the running translation job. */
+  /** 中止运行中的翻译任务。 */
   cancelTranslation: () => Promise<void>;
 }
 
@@ -100,21 +100,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     downloaded: false,
     progress: null,
     error: null,
-    // Optimistic until the first probe resolves: flashing the "engine missing"
-    // error on every launch would be worse than briefly showing the toggle.
+    // 首次探测完成前保持乐观：每次启动都闪现「引擎缺失」错误，比短暂
+    // 显示开关更糟。
     engineAvailable: true,
   });
   const [chapterTitle, setChapterTitle] = useState('');
   const [toast, setToast] = useState<Toast | null>(null);
   const [health, setHealth] = useState<SystemHealth | null>(null);
-  /** Chunk progress for the running job; null when idle or single-chunk. */
+  /** 运行中任务的分块进度；空闲或单分块时为 null。 */
   const [progress, setProgress] = useState<TranslateProgress | null>(null);
 
   const refreshSettings = useCallback(async () => {
     try {
       setSettings(await window.electronAPI.getSettings());
     } catch {
-      /* ignore — settings stay null until a successful reload */
+      /* ignore —— 设置保持为 null，直到某次重载成功 */
     }
   }, []);
 
@@ -122,7 +122,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     try {
       setGlossaries(await window.electronAPI.glossaryList());
     } catch {
-      /* ignore — the glossary list stays empty until a successful reload */
+      /* ignore —— 术语表列表保持为空，直到某次重载成功 */
     }
   }, []);
 
@@ -130,7 +130,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     try {
       setOfflineStatus(await window.electronAPI.offlineStatus());
     } catch {
-      /* ignore — offline status stays at its defaults */
+      /* ignore —— 离线状态保持其默认值 */
     }
   }, []);
 
@@ -138,7 +138,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     try {
       setHealth(await apiSystemHealth());
     } catch {
-      /* ignore — health stays null, so no banner is shown */
+      /* ignore —— 健康状况保持为 null，因此不显示横幅 */
     }
   }, []);
 
@@ -151,7 +151,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     ]);
   }, [refreshSettings, refreshGlossaries, refreshOfflineStatus, refreshHealth]);
 
-  // Main-process → renderer events.
+  // 主进程 → 渲染进程事件。
   useEffect(() => {
     const offHotkey = window.electronAPI.onHotkeyResult(({ original, translated }) => {
       setTranslation({
@@ -176,7 +176,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  // Auto-dismiss toasts.
+  // 自动关闭 toast。
   useEffect(() => {
     if (!toast) return;
     const id = setTimeout(() => setToast(null), 5000);
@@ -190,13 +190,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const translateText = useCallback(
     async (text: string, sourceLang: string, targetLang: string) => {
-      // The glossary is filtered to the terms this passage actually contains, so
-      // a large glossary cannot crowd the chapter out of the prompt.
+      // 术语表会过滤为该段落实际包含的术语，这样庞大的术语表才不会
+      // 把章节挤出提示词。
       const systemPrompt = buildSystemPrompt(sourceLang, targetLang, activeGlossary, text);
       setTranslation({ originalText: text, translatedText: '', translating: true, error: null });
       setProgress(null);
 
-      /** Returns true when the attempt produced a translation. */
+      /** 该次尝试产出了翻译时返回 true。 */
       const runOnline = async (): Promise<boolean> => {
         const result = await window.electronAPI.translate({ text, systemPrompt, chapterTitle });
         if (result.success) {
@@ -245,8 +245,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       try {
         if (engine === 'offline') {
           if (!offlineReady) {
-            // Guard here rather than calling through: the main process would
-            // start a ~870 MB model download as a side effect of translating.
+            // 在此处守卫，而不是直接调用：否则主进程会把一次约 870 MB 的
+            // 模型下载当作翻译的副作用启动。
             setTranslation({
               originalText: text,
               translatedText: '',
@@ -264,8 +264,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           return;
         }
 
-        // auto: online first when a key exists, otherwise offline; one fallback
-        // so a transient API failure still yields a result.
+        // auto：有密钥时先在线，否则离线；允许一次回落，
+        // 使瞬时的 API 失败仍能产出结果。
         if (settings?.hasApiKey) {
           const onlineOk = await runOnline();
           if (onlineOk || !offlineReady) return;
@@ -276,7 +276,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           await runOffline();
           return;
         }
-        // Nothing configured yet — let the online path report the missing key.
+        // 尚未配置任何内容——让在线路径报告缺少密钥。
         await runOnline();
       } catch (err) {
         setTranslation({
@@ -310,7 +310,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setProgress(null);
   }, []);
 
-  /** Abort the running job. Completed chunks stay cached, so retrying is cheap. */
+  /** 中止运行中的任务。已完成的分块仍留在缓存中，因此重试代价很低。 */
   const cancelTranslation = useCallback(async () => {
     await apiCancelTranslate();
   }, []);

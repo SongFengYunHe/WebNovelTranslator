@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_CHUNK_MAX_CHARS, chunkText } from '../chunking';
 
-/** The paragraph list a chunked result is expected to represent. */
+/** 分块结果预期代表的段落列表。 */
 function paragraphsOf(text: string): string[] {
   return text
     .split(/\n+/)
@@ -21,7 +21,7 @@ describe('chunkText', () => {
 
   it('packs paragraphs greedily up to the budget', () => {
     const text = 'aaaa\nbbbb\ncccc';
-    // "aaaa\nbbbb" is 9 chars, adding "\ncccc" would make 14 > 10.
+    // "aaaa\nbbbb" 是 9 个字符，再加 "\ncccc" 会变成 14 > 10。
     expect(chunkText(text, 10)).toEqual(['aaaa\nbbbb', 'cccc']);
   });
 
@@ -44,12 +44,12 @@ describe('chunkText', () => {
 
   it('splits one oversized paragraph on sentence boundaries', () => {
     const sentence = '这是一个句子。';
-    const paragraph = sentence.repeat(20); // 140 chars, no blank lines
+    const paragraph = sentence.repeat(20); // 140 字符，无空行
     const chunks = chunkText(paragraph, 60);
     expect(chunks.length).toBeGreaterThan(1);
     for (const chunk of chunks) {
       expect(chunk.length).toBeLessThanOrEqual(60);
-      // Sentence terminators stay attached to the sentence they close.
+      // 句子终止符仍附着在它所结束的句子末尾。
       expect(chunk.endsWith('。')).toBe(true);
     }
     expect(chunks.join('')).toBe(paragraph);

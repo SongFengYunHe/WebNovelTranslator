@@ -1,6 +1,6 @@
 /**
- * Simplified Chinese UI strings (the default locale). Key parity with en.ts is
- * enforced by the Dictionary type (every en key must appear here).
+ * 简体中文界面文案（默认语言）。与 en.ts 的键一致性由 Dictionary 类型强制
+ * （每个 en 键都必须出现在这里）。
  */
 import type { TranslationKey } from './index';
 
@@ -76,6 +76,8 @@ export const zh: Record<TranslationKey, string> = {
   'glossary.deleteConfirm': '确定删除术语表“{name}”吗？',
   'glossary.sourceTerm': '源术语',
   'glossary.targetTerm': '目标术语',
+  'glossary.sourcePlaceholder': '例如：火球术',
+  'glossary.targetPlaceholder': '例如：火球术的译文',
   'glossary.rename': '重命名',
   'glossary.delete': '删除',
   'glossary.removeRow': '删除该行',

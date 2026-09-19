@@ -1,8 +1,8 @@
 /**
- * Encrypted settings store (electron-store) + defaults.
+ * 加密设置存储（electron-store）+ 默认值。
  *
- * The v1 on-disk format is preserved; v2 fields are additive and defaulted, so
- * an existing `settings.json` from 1.x upgrades seamlessly.
+ * v1 的磁盘格式予以保留；v2 的字段是新增且带默认值的，因此 1.x 的现有
+ * `settings.json` 可无缝升级。
  *
  * 设置以 AES-256-GCM 加密存储在 userData，API 密钥绝不进入渲染进程。
  * 新增字段需同时更新 DEFAULT_SETTINGS、updateSettings 与 shared/types。
@@ -20,13 +20,11 @@ import { readApiKey, writeApiKey } from './secret';
 import log from './logger';
 
 /**
- * electron-store's built-in AES-256-GCM seed.
+ * electron-store 内置的 AES-256-GCM 种子。
  *
- * This is NOT a secret — it is committed to the repository, so it only
- * obfuscates `settings.json`; it does not protect anything from someone who has
- * the file. It is retained solely so the existing on-disk format keeps working.
- * The one genuinely sensitive field, the API key, is stored separately under
- * OS-level encryption (see `./secret.ts`).
+ * 这「不是」机密——它已提交到仓库，因此只能混淆 `settings.json`，无法对拿到该
+ * 文件的人提供任何保护。保留它仅仅是为了让现有磁盘格式继续可用。唯一真正敏感
+ * 的字段——API 密钥——以操作系统级加密单独存储（见 `./secret.ts`）。
  */
 const ENCRYPTION_KEY = 'web-novel-translator-v1-secret-key';
 
@@ -34,23 +32,23 @@ export const DEFAULT_SETTINGS: AppSettings = {
   apiKey: '',
   baseUrl: 'https://api.openai.com/v1',
   model: 'gpt-4o',
-  // 0.3 rather than 0.7: translation wants fidelity, not creative variation.
+  // 用 0.3 而非 0.7：翻译追求忠实，而非创造性变化。
   temperature: 0.3,
   maxTokens: 4096,
   sourceLang: 'zh',
   targetLang: 'en',
   activeGlossaryId: null,
-  // Part E1: Simplified Chinese is the default UI language.
+  // E1 部分：默认界面语言为简体中文。
   uiLanguage: 'zh',
-  // Part D: provider preset selector.
+  // D 部分：服务商预设选择器。
   provider: 'custom',
-  // Part A3: configurable global hotkey.
+  // A3 部分：可配置的全局快捷键。
   hotkey: DEFAULT_HOTKEY,
-  // Part A4: offline translation.
+  // A4 部分：离线翻译。
   offlineEnabled: false,
-  // Which engine to translate with; `auto` keeps the previous behaviour.
+  // 使用哪种引擎翻译；`auto` 保持原有行为。
   translateEngine: 'auto',
-  // Part A2/A5: last chapter title.
+  // A2/A5 部分：上一章的章节标题。
   lastChapterTitle: '',
   // 历史自动清理：默认删除超过 90 天的记录，0 表示关闭。
   historyAutoDeleteDays: 90,
@@ -62,18 +60,16 @@ const settingsStore = new Store<{ settings: AppSettings }>({
   defaults: { settings: DEFAULT_SETTINGS },
 });
 
-/** Read settings.json and fold in defaults. */
+/** 读取 settings.json 并合入默认值。 */
 function readStoredSettings(): AppSettings {
   return { ...DEFAULT_SETTINGS, ...settingsStore.get('settings') };
 }
 
 /**
- * One-shot migration: v3.0.1 and earlier persisted the API key inside
- * `settings.json`. Move it into OS-protected storage and blank the field so the
- * file no longer carries the key.
+ * 一次性迁移：v3.0.1 及更早版本把 API 密钥持久化在 `settings.json` 内。将其移入
+ * 操作系统保护的存储，并清空该字段，使文件不再携带密钥。
  *
- * Idempotent — the guard short-circuits on every run after the first, and a
- * failure keeps the legacy value in place rather than losing the key.
+ * 幂等——首次之后每次运行都会被守卫短路，且失败时保留旧值而不是丢失密钥。
  */
 function migrateLegacyApiKey(stored: AppSettings): AppSettings {
   if (!stored.apiKey) return stored;
@@ -91,9 +87,8 @@ function migrateLegacyApiKey(stored: AppSettings): AppSettings {
 
 export function getSettings(): AppSettings {
   const stored = migrateLegacyApiKey(readStoredSettings());
-  // The secret store is authoritative once it holds a key. If it is empty while
-  // the legacy field still has a value, migration must have failed — keep using
-  // the legacy key rather than dropping it.
+  // 一旦密钥存储持有密钥，它就是权威来源。若其为空而旧字段仍有值，说明迁移
+  // 一定失败了——继续使用旧密钥而不是丢弃它。
   const secret = readApiKey();
   return { ...stored, apiKey: secret || stored.apiKey };
 }
@@ -114,8 +109,8 @@ const isTranslateEngine = (v: unknown): v is TranslateEngine =>
   v === 'auto' || v === 'online' || v === 'offline';
 
 /**
- * Apply a partial patch and persist. Backward compatible: only known fields are
- * written, and the API key is only ever replaced by a non-empty string.
+ * 应用部分补丁并持久化。向后兼容：只写入已知字段，且 API 密钥只会被非空字符串
+ * 替换。
  */
 export function updateSettings(patch: SaveSettingsPatch): SettingsPublic {
   const cur = getSettings();
@@ -141,16 +136,14 @@ export function updateSettings(patch: SaveSettingsPatch): SettingsPublic {
   if (typeof patch.historyAutoDeleteDays === 'number' && patch.historyAutoDeleteDays >= 0) {
     next.historyAutoDeleteDays = Math.floor(patch.historyAutoDeleteDays);
   }
-  // The key itself goes to OS-protected storage. Only a non-empty value
-  // replaces the existing key, so leaving the field blank keeps it. A genuine
-  // write failure throws, letting the renderer tell the user it was not saved.
+  // 密钥本身进入操作系统保护的存储。只有非空值才会替换现有密钥，因此留空
+  // 即保留原密钥。真正的写入失败会抛异常，让渲染进程告知用户未保存。
   if (typeof patch.apiKey === 'string' && patch.apiKey.trim() !== '') {
     writeApiKey(patch.apiKey);
   }
 
-  // settings.json must never carry the key — but blank the legacy field only
-  // once the secret store is known to hold it, so a failed migration cannot
-  // lose a key the user already had.
+  // settings.json 绝不能携带密钥——但只有在确认密钥存储已持有它之后才清空
+  // 旧字段，这样迁移失败也不会丢掉用户原有的密钥。
   const secret = readApiKey();
   settingsStore.set('settings', { ...next, apiKey: secret ? '' : next.apiKey });
 

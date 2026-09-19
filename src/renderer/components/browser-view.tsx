@@ -1,18 +1,17 @@
 /**
- * BrowserView - built-in page loader & text extraction.
+ * BrowserView —— 内置页面加载器与文本提取。
  *
- * Uses a sandboxed <webview> to load any chapter URL, then injects JavaScript
- * to extract clean chapter text:
- *   1. window.getSelection().toString() if the user selected text
- *   2. common chapter selectors (article, .chapter-content, #content, …)
- *   3. fallback to document.body.innerText
- * Navigation/ads/scripts are stripped before reading.
+ * 使用沙箱化的 <webview> 加载任意章节 URL，然后注入 JavaScript 提取干净的章节文本：
+ *   1. 若用户选中了文本，则用 window.getSelection().toString()
+ *   2. 常见的章节选择器（article、.chapter-content、#content，……）
+ *   3. 回落到 document.body.innerText
+ * 阅读前会剥离导航/广告/脚本。
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useApp } from '../contexts/app-context';
 import { useI18n } from '../contexts/i18n-context';
 
-/** Injected into the guest page. Runs in the page's own context. */
+/** 注入到访客页面中。在页面自身的上下文中运行。 */
 const EXTRACT_JS = `
 (function () {
   function norm(s) { return (s || '').replace(/\\u00a0/g, ' ').replace(/[ \\t]+/g, ' ').trim(); }

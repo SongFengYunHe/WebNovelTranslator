@@ -1,19 +1,18 @@
 /**
- * SettingsPage:
- *  - provider preset dropdown: Custom / DeepSeek / Kimi (Part D)
- *  - API key (masked; never sent back from main), base URL, model, params
- *  - global hotkey capture (Part A3)
- *  - offline translation toggle + download progress (Part A4)
- *  - "Check for updates" (Part A1)
- *  - UI language switch
- *  - history auto-clean (Part 1g)
+ * SettingsPage：
+ *  - 服务商预设下拉框：Custom / DeepSeek / Kimi（D 部分）
+ *  - API 密钥（掩码显示；绝不从主进程回传）、base URL、模型、参数
+ *  - 全局快捷键捕获（A3 部分）
+ *  - 离线翻译开关 + 下载进度（A4 部分）
+ *  - 「检查更新」（A1 部分）
+ *  - 界面语言切换
+ *  - 历史自动清理（1g 部分）
  *
  * 设置页：集中管理服务商、密钥、模型参数、全局快捷键、离线翻译与更新检查。
  *
- * v3.0.1 layout: the outermost container covers the whole window (gray
- * background, overflow hidden). All form content lives in a scrollable middle
- * area (`settings-scroll`), and the Save/Test buttons are pinned to the bottom
- * of the window in a fixed footer (`settings-actions`).
+ * v3.0.1 布局：最外层容器覆盖整个窗口（灰色背景、overflow hidden）。所有表单内容
+ * 位于可滚动的中间区域（`settings-scroll`），保存/测试按钮固定在窗口底部的固定页脚
+ * （`settings-actions`）中。
  */
 import React, { useCallback, useEffect, useState } from 'react';
 import { useApp } from '../contexts/app-context';
@@ -82,9 +81,8 @@ export default function SettingsPage() {
   const save = useCallback(async () => {
     setSaveError(false);
     try {
-      // The API key is written to OS-protected storage in the main process and
-      // can fail (e.g. safeStorage unavailable + disk error). Surface that
-      // instead of silently pretending the key was saved.
+      // API 密钥在主进程中被写入操作系统保护的存储，可能失败（例如
+      // safeStorage 不可用 + 磁盘错误）。要如实呈现，而不是静默假装密钥已保存。
       await apiSaveSettings({
         provider,
         baseUrl: baseUrl.trim() || 'https://api.openai.com/v1',
@@ -113,7 +111,7 @@ export default function SettingsPage() {
     setTesting(false);
   }, []);
 
-  // ---- Hotkey capture (Part A3) --------------------------------------------
+  // ---- 快捷键捕获（A3 部分）------------------------------------------------
   const onHotkeyKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
       e.preventDefault();
@@ -126,7 +124,7 @@ export default function SettingsPage() {
       if (e.altKey) mods.push('Alt');
       if (e.shiftKey) mods.push('Shift');
       if (e.metaKey) mods.push('Super');
-      if (!mods.length) return; // require at least one modifier
+      if (!mods.length) return; // 至少要求一个修饰键
       let key = e.key;
       if (key.length === 1) key = key.toUpperCase();
       const combo = [...mods, key].join('+');
@@ -146,14 +144,14 @@ export default function SettingsPage() {
     setTimeout(() => setHotkeyMsg(null), 4000);
   }, [hotkey, t]);
 
-  // ---- Offline translation (Part A4) ----------------------------------------
+  // ---- 离线翻译（A4 部分）--------------------------------------------------
   const toggleOffline = useCallback(
     async (enabled: boolean) => {
       await apiSaveSettings({ offlineEnabled: enabled });
       await refreshSettings();
       if (enabled && !offlineStatus.downloaded) {
-        // Start the ~870 MB download immediately; progress streams via
-        // onOfflineProgress (main-process 'offline:progress' events).
+        // 立即开始约 870 MB 的下载；进度通过 onOfflineProgress
+        //（主进程的 'offline:progress' 事件）流入。
         await apiOfflineDownload();
       }
       await refreshOfflineStatus();
@@ -161,7 +159,7 @@ export default function SettingsPage() {
     [offlineStatus.downloaded, refreshSettings, refreshOfflineStatus]
   );
 
-  // ---- Check for updates (Part A1) -------------------------------------------
+  // ---- 检查更新（A1 部分）---------------------------------------------------
   const checkUpdates = useCallback(async () => {
     setUpdateState({ phase: 'checking' });
     const result = await apiUpdateCheck();
@@ -259,7 +257,7 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* ---- Global hotkey (Part A3) ---- */}
+        {/* ---- 全局快捷键（A3 部分）---- */}
         <section className="settings-section">
           <h4>{t('settings.hotkey')}</h4>
           <div className="hotkey-row">
@@ -286,13 +284,12 @@ export default function SettingsPage() {
           <small>{t('settings.hotkeyHint')}</small>
         </section>
 
-        {/* ---- Offline translation (Part A4) ---- */}
+        {/* ---- 离线翻译（A4 部分）---- */}
         <section className="settings-section">
           <h4>{t('settings.offlineTitle')}</h4>
 
-          {/* Release installers exclude the engine to stay inside the size
-              budget. Say so up front rather than letting the user download
-              ~870 MB for a feature that cannot run. */}
+          {/* 发布安装包为守住体积预算而排除了引擎。要提前说明，而不是让
+              用户为一个无法运行的特性下载约 870 MB。 */}
           {!offlineStatus.engineAvailable ? (
             <div className="inline-error">⚠ {t('settings.offlineEngineMissing')}</div>
           ) : (
@@ -336,7 +333,7 @@ export default function SettingsPage() {
           )}
         </section>
 
-        {/* ---- History auto-clean (Part 1g: 历史体积管理) ---- */}
+        {/* ---- 历史自动清理（1g 部分：历史体积管理）---- */}
         <section className="settings-section">
           <h4>{t('settings.historyAutoDelete')}</h4>
           <label className="field">
@@ -351,7 +348,7 @@ export default function SettingsPage() {
           </label>
         </section>
 
-        {/* ---- Check for updates (Part A1) ---- */}
+        {/* ---- 检查更新（A1 部分）---- */}
         <section className="settings-section">
           <h4>{t('settings.checkUpdates')}</h4>
           <div className="hotkey-row">
@@ -391,9 +388,8 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* v3.0.1: Save / Test live in a fixed footer pinned to the bottom of the
-          window (flex-shrink: 0, white background, top border). They never
-          scroll away with the content. */}
+      {/* v3.0.1：保存 / 测试位于固定在窗口底部的页脚中
+          （flex-shrink: 0、白色背景、上边框）。它们绝不会随内容滚走。 */}
       <div className="settings-actions">
         {saveError && <div className="inline-error">⚠ {t('settings.saveFailed')}</div>}
         <button className="btn primary" onClick={() => void save()}>

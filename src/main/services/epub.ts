@@ -1,7 +1,6 @@
 /**
- * EPUB export (Part A5) via epub-gen. Each chapter becomes one EPUB chapter
- * with the original and translated text shown in parallel (original first,
- * then a divider, then the translation).
+ * 通过 epub-gen 导出 EPUB（A5 部分）。每个章节成为一个 EPUB 章节，原文与译文
+ * 并排展示（先是原文，然后是分隔线，再是译文）。
  */
 import { dialog, type BrowserWindow } from 'electron';
 import path from 'path';
@@ -34,7 +33,7 @@ export interface EpubExportResult {
 }
 
 /**
- * Ask for a save location and write the EPUB. Returns the written path.
+ * 询问保存位置并写入 EPUB。返回写入的路径。
  */
 export async function exportEpub(
   getWindow: () => BrowserWindow | null,

@@ -1,14 +1,14 @@
 /**
- * Simple context-based i18n.
+ * 基于 Context 的简易 i18n。
  *
- * Provides:
- *  - `locale`   current UI language ('en' | 'zh')
- *  - `setLocale` switches the language and persists it (localStorage for
- *    instant startup + the encrypted main-process settings store)
- *  - `t(key, params?)`  translates a key for the current locale
+ * 提供：
+ *  - `locale`   当前界面语言（'en' | 'zh'）
+ *  - `setLocale` 切换语言并持久化（localStorage 用于即时启动 +
+ *    加密的主进程设置存储）
+ *  - `t(key, params?)`  为当前语言翻译一个键
  *
- * On mount the locale is initialised synchronously from localStorage to avoid
- * a flash of the wrong language, then reconciled with the persisted setting.
+ * 挂载时语言会从 localStorage 同步初始化，以避免闪现错误语言，随后再与持久化的
+ * 设置对齐。
  */
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { translate, type Locale, type TranslationKey } from '../i18n';
@@ -31,7 +31,7 @@ function readInitialLocale(): Locale {
 export function I18nProvider({ children }: { children: React.ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>(readInitialLocale);
 
-  // Reconcile with the persisted setting once it arrives.
+  // 设置到达后与之对齐。
   useEffect(() => {
     let cancelled = false;
     window.electronAPI
@@ -44,7 +44,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
         }
       })
       .catch(() => {
-        /* settings unavailable - keep the local default */
+        /* 设置不可用——保留本地默认值 */
       });
     return () => {
       cancelled = true;
@@ -57,7 +57,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     try {
       await window.electronAPI.saveSettings({ uiLanguage: next });
     } catch {
-      /* ignore — the in-memory locale still applies for this session */
+      /* ignore —— 本次会话仍使用内存中的语言 */
     }
   }, []);
 

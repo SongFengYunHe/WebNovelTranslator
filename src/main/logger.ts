@@ -1,18 +1,17 @@
 /**
- * Centralized logging via electron-log.
+ * 通过 electron-log 统一记录日志。
  *
- * Writes to <userData>/logs/main.log so the user can send us a diagnostic file
- * when something goes wrong. Every error path in the app should route through
- * here (Part E3: "All errors logged to file via electron-log").
+ * 写入 <userData>/logs/main.log，便于用户在我们出错时发送诊断文件。应用中的每条
+ * 错误路径都应经过这里（E3 部分：「All errors logged to file via electron-log」）。
  */
 import log from 'electron-log/main';
 import { app } from 'electron';
 
 log.initialize();
 
-// Attach a PID suffix so crash-on-restart overwrites are distinguishable.
+// 附加 PID 后缀，使崩溃重启后的覆盖可被区分。
 log.transports.file.fileName = 'main.log';
-log.transports.file.maxSize = 5 * 1024 * 1024; // 5 MB cap
+log.transports.file.maxSize = 5 * 1024 * 1024; // 上限 5 MB
 
 log.info(`[logger] initialized (pid ${process.pid})`);
 
@@ -22,9 +21,8 @@ export interface LogExitInfo {
 }
 
 /**
- * Record why the app is exiting (Part E2: "Log process exit status"). Called
- * from the main process' shutdown path. `reason` is a short label; `exitCode`
- * is the numeric code the process will exit with, when known.
+ * 记录应用退出的原因（E2 部分：「Log process exit status」）。由主进程的退出流程
+ * 调用。`reason` 是简短标签；`exitCode` 是进程将要退出的数字码（已知时）。
  */
 export function logExit(info: LogExitInfo): void {
   if (info.exitCode === undefined) {

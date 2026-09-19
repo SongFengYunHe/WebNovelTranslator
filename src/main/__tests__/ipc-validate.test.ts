@@ -11,7 +11,7 @@ import {
   validateTranslateRequest,
 } from '../ipc-validate';
 
-/** Assert the call is rejected with an IpcValidationError. */
+/** 断言该调用以 IpcValidationError 被拒绝。 */
 function expectReject(fn: () => unknown): void {
   expect(fn).toThrow(IpcValidationError);
 }
@@ -107,7 +107,7 @@ describe('validateHistoryQuery', () => {
 describe('validateRetentionDays', () => {
   it('requires a positive whole number of days', () => {
     expect(validateRetentionDays(30)).toBe(30);
-    // 0 would mean "delete everything older than now" — never a valid request.
+    // 0 意味着「删除此刻之前的一切」——永远不是合法请求。
     expectReject(() => validateRetentionDays(0));
     expectReject(() => validateRetentionDays(-5));
     expectReject(() => validateRetentionDays('30'));

@@ -24,8 +24,8 @@ describe('translationCacheKey', () => {
   });
 
   it('does not collide across field boundaries', () => {
-    // Without a separator, {text:'ab', model:'c'} and {text:'a', model:'bc'}
-    // would hash identically.
+    // 没有分隔符时，{text:'ab', model:'c'} 与 {text:'a', model:'bc'}
+    // 会哈希出相同的结果。
     const a = translationCacheKey({ ...base, text: 'ab', model: 'c' });
     const b = translationCacheKey({ ...base, text: 'a', model: 'bc' });
     expect(a).not.toBe(b);
@@ -69,12 +69,12 @@ describe('translation cache', () => {
 
   it('refreshes recency on a hit, so a read protects an entry from eviction', () => {
     for (let i = 0; i < MAX_CACHE_ENTRIES; i++) cacheTranslation(`k${i}`, `v${i}`);
-    // Touch the oldest entry, then overflow the cache.
+    // 触碰最旧的条目，然后让缓存溢出。
     expect(getCachedTranslation('k0')).toBe('v0');
     cacheTranslation('overflow', 'v');
 
     expect(getCachedTranslation('k0')).toBe('v0');
-    // k1 is now the least recently used.
+    // k1 现在是最久未使用的。
     expect(getCachedTranslation('k1')).toBeUndefined();
   });
 

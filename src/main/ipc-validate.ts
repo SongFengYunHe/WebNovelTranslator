@@ -1,15 +1,12 @@
 /**
- * Runtime validation for IPC payloads.
+ * IPC 载荷的运行时校验。
  *
- * The renderer is sandboxed, but it still runs third-party page content inside
- * the Browser tab's `<webview>`. If that content ever reaches
- * `window.electronAPI`, these checks are the boundary that stops malformed or
- * hostile arguments from reaching the filesystem, the SQLite database or the
- * encrypted settings store.
+ * 渲染进程处于沙箱中，但它仍会在「浏览器」标签页的 `<webview>` 内运行第三方页面
+ * 内容。一旦这些内容触达 `window.electronAPI`，这些检查就是边界，用来阻止畸形
+ * 或恶意的参数进入文件系统、SQLite 数据库或加密设置存储。
  *
- * Hand-rolled rather than schema-library-based on purpose: the surface is a
- * dozen primitives, and the installer has a hard size budget — a general
- * validation library would add several megabytes for no extra safety here.
+ * 刻意手写而非基于 schema 库：暴露面只有十来个原语，而安装包有严格的体积预算——
+ * 通用校验库会平白增加数兆字节且不提供额外安全性。
  */
 import type {
   EpubRequest,
@@ -20,7 +17,7 @@ import type {
   TranslateRequest,
 } from '../shared/types';
 
-/** Raised when a payload fails validation. Callers log it and reject the IPC call. */
+/** 载荷校验失败时抛出。调用方记录日志并拒绝该 IPC 调用。 */
 export class IpcValidationError extends Error {
   constructor(message: string) {
     super(message);
@@ -28,9 +25,9 @@ export class IpcValidationError extends Error {
   }
 }
 
-// ---- Primitives -------------------------------------------------------------
+// ---- 基础类型 ---------------------------------------------------------------
 
-/** Upper bounds are deliberately generous: they stop abuse, not real usage. */
+/** 上界刻意放宽：它们只用来阻止滥用，而非限制正常使用。 */
 const LIMITS = {
   text: 500_000,
   systemPrompt: 200_000,
@@ -95,26 +92,25 @@ function requireOneOf<T extends string>(
   return value as T;
 }
 
-/** `undefined` stays `undefined`; anything else must satisfy `check`. */
+/** `undefined` 保持为 `undefined`；其它值都必须满足 `check`。 */
 function optional<T>(value: unknown, field: string, check: (v: unknown) => T): T | undefined {
   return value === undefined ? undefined : check(value);
 }
 
-/** `null` stays `null`; anything else must satisfy `check`. */
+/** `null` 保持为 `null`；其它值都必须满足 `check`。 */
 function nullable<T>(value: unknown, field: string, check: (v: unknown) => T): T | null {
   return value === null ? null : check(value);
 }
 
-// ---- Payload validators -----------------------------------------------------
+// ---- 载荷校验器 -------------------------------------------------------------
 
 const providers = ['custom', 'deepseek', 'kimi'] as const;
 const uiLanguages = ['en', 'zh'] as const;
 const translateEngines = ['auto', 'online', 'offline'] as const;
 
 /**
- * Validate a settings patch. Unknown keys are ignored (the store only reads the
- * fields it knows), and every recognised field is range-checked so a hostile
- * renderer cannot persist nonsense that later breaks the request path.
+ * 校验设置补丁。未知键会被忽略（存储只读取它认识的字段），每个已识别的字段都会
+ * 做范围检查，因此恶意渲染进程无法持久化后期会破坏请求链路的垃圾值。
  */
 export function validateSaveSettingsPatch(raw: unknown): SaveSettingsPatch {
   const o = asRecord(raw, 'settings patch');
@@ -246,7 +242,7 @@ export function validateHistoryId(raw: unknown): number {
   return requireInt(raw, 'id', 1, Number.MAX_SAFE_INTEGER);
 }
 
-/** Retention window for "clear history older than N days". */
+/** 「清除超过 N 天的历史记录」的保留窗口。 */
 export function validateRetentionDays(raw: unknown): number {
   return requireInt(raw, 'days', 1, 36_500);
 }

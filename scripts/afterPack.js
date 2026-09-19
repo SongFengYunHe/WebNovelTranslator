@@ -1,14 +1,13 @@
 /**
- * electron-builder `afterPack` hook.
+ * electron-builder 的 `afterPack` 钩子。
  *
- * When `win.signAndEditExecutable` is disabled (see electron-builder.config.js —
- * the bundled winCodeSign archive cannot be extracted on machines where the
- * Windows symlink privilege is unavailable), electron-builder would normally
- * skip embedding the icon/version metadata. This hook does it with the
- * standalone `rcedit-x64.exe` we extracted into tools/.
+ * 当 `win.signAndEditExecutable` 被禁用时（见 electron-builder.config.js——
+ * 在无法获得 Windows 符号链接权限的机器上，内置的 winCodeSign 归档无法解压），
+ * electron-builder 通常会跳过嵌入图标/版本元数据。此钩子用我们解压到 tools/ 中的
+ * 独立 `rcedit-x64.exe` 来完成它。
  *
- * Runs after the app is packed into `appOutDir` and before the installers
- * are assembled, so the custom icon ends up in the installed exe too.
+ * 在应用被打包进 `appOutDir` 之后、安装包被组装之前运行，因此自定义图标也会进入
+ * 已安装的 exe。
  */
 const path = require('path');
 const fs = require('fs');

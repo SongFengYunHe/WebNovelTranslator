@@ -1,18 +1,16 @@
 /**
- * Semantic-version comparison.
+ * 语义化版本比较。
  *
- * Kept in `shared/` (dependency-free, no Electron imports) so it can be unit
- * tested directly — `src/main/services/update.ts` previously held this logic
- * next to an `electron-updater` import, which made it untestable without an
- * Electron runtime.
+ * 放在 `shared/` 中（无依赖、不引入 Electron），因此可直接单元测试——
+ * `src/main/services/update.ts` 过去把这套逻辑放在 `electron-updater` 导入旁边，
+ * 导致没有 Electron 运行时就无法测试。
  */
 
 /**
- * Compare two dot-separated version strings.
+ * 比较两个以点分隔的版本字符串。
  *
- * @returns a positive number when `a` is newer than `b`, negative when older,
- *          and `0` when they are equivalent. Missing or non-numeric segments
- *          are treated as `0`, so `"1.2"` and `"1.2.0"` compare equal.
+ * @returns `a` 比 `b` 新时返回正数，更旧时返回负数，相等时返回 `0`。缺失或非数字
+ *          的段按 `0` 处理，因此 `"1.2"` 与 `"1.2.0"` 比较结果相等。
  */
 export function compareVersions(a: string, b: string): number {
   const pa = a.split('.').map((x) => parseInt(x, 10) || 0);
@@ -25,7 +23,7 @@ export function compareVersions(a: string, b: string): number {
   return 0;
 }
 
-/** True when `candidate` is strictly newer than `current`. */
+/** `candidate` 严格新于 `current` 时为 true。 */
 export function isNewerVersion(candidate: string, current: string): boolean {
   return compareVersions(candidate, current) > 0;
 }

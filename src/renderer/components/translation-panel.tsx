@@ -1,10 +1,10 @@
 /**
- * TranslationPanel - the main "Translate" tab.
- *  - source / target language dropdowns
- *  - optional chapter title (recorded in history + EPUB export)
- *  - original text input
- *  - side-by-side alternating paragraph display of original vs translation
- *  - copy, EPUB export and clear actions
+ * TranslationPanel —— 主「翻译」标签页。
+ *  - 原文 / 译文语言下拉框
+ *  - 可选的章节标题（记录到历史 + EPUB 导出）
+ *  - 原文输入框
+ *  - 原文与译文的并排、逐段交替展示
+ *  - 复制、EPUB 导出与清除操作
  *
  * 主翻译页：段落级对照展示原文与译文，支持复制与 EPUB 导出。
  */
@@ -49,7 +49,7 @@ export default function TranslationPanel() {
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
-      // clipboard may be unavailable; ignore
+      // 剪贴板可能不可用；忽略
     }
   };
 
@@ -117,8 +117,8 @@ export default function TranslationPanel() {
           </select>
         </label>
 
-        {/* v3.0.0: Glossary is a core feature — switch the active glossary
-            right from the translate toolbar, no need to leave this tab. */}
+        {/* v3.0.0：术语表是核心功能——可直接在翻译工具栏切换当前术语表，
+            无需离开本标签页。 */}
         <label className="pair glossary-switch" title={t('glossary.switchTitle')}>
           <span className="pair-label">📖 {t('glossary.active')}</span>
           <select
@@ -147,8 +147,8 @@ export default function TranslationPanel() {
           </span>
         )}
 
-        {/* Which engine to use. Previously this was decided silently, and the
-            "enable offline" toggle was ignored whenever an API key existed. */}
+        {/* 使用哪个引擎。过去这是静默决定的，只要存在 API 密钥，
+            「启用离线」开关就会被忽略。 */}
         <label className="pair" title={t('engine.hint')}>
           <span className="pair-label">⚙ {t('engine.label')}</span>
           <select

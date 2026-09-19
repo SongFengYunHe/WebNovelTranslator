@@ -1,11 +1,10 @@
 /**
- * Dynamic prompt assembly (shared between the main process and the renderer so
- * global-hotkey / offline translation compose the exact same prompt the UI
- * does). Dependency-free — only imports the `Glossary` type.
+ * 动态提示词组装（在主进程与渲染进程之间共享，使全局快捷键 / 离线翻译组装出与
+ * 界面完全相同的提示词）。无依赖——只导入 `Glossary` 类型。
  *
- * The system prompt template is composed at runtime with:
- *   1. the active glossary (line-separated `source -> target` entries)
- *   2. language-pair-specific rules
+ * 系统提示词模板在运行时由以下内容组装：
+ *   1. 当前术语表（逐行的 `source -> target` 条目）
+ *   2. 针对语言对的规则
  */
 import type { Glossary } from './types';
 
@@ -16,7 +15,7 @@ export const LANG_LABELS: Record<string, string> = {
   ko: 'Korean',
 };
 
-/** Language-pair rules. Extensible: add a new key like `fr→en` with its own rules. */
+/** 语言对规则。可扩展：新增一个如 `fr→en` 的键并配上自己的规则即可。 */
 const LANGUAGE_RULES: Record<string, string> = {
   'zh→en': `Use vivid, engaging English suited to web novels.
 • Translate character names into pinyin.
@@ -74,13 +73,11 @@ Formatting
 Now, translate the following text:`;
 
 /**
- * Narrow a glossary down to the entries whose source term actually occurs in
- * `text`.
+ * 把术语表收窄到其源术语确实出现在 `text` 中的条目。
  *
- * The whole active glossary is injected into the prompt, so a large one
- * (hundreds of cultivation terms, character names, place names) can crowd out
- * the chapter itself. Filtering to the terms present in the passage keeps the
- * prompt small and the model's attention on the text.
+ * 整个启用中的术语表都会被注入提示词，因此一份庞大的术语表（数百个修炼术语、
+ * 人名、地名）可能挤占章节本身。过滤出该段落中出现的术语，能让提示词保持精简，
+ * 并让模型的注意力集中在文本上。
  */
 export function filterGlossaryToText(glossary: Glossary | null, text: string): Glossary | null {
   if (!glossary) return null;
@@ -92,10 +89,9 @@ export function filterGlossaryToText(glossary: Glossary | null, text: string): G
 }
 
 /**
- * Build the full system prompt for the given language pair and glossary.
+ * 为给定的语言对与术语表构建完整的系统提示词。
  *
- * `text` is the passage about to be translated — the glossary is filtered to
- * the terms it actually contains before being injected.
+ * `text` 是即将被翻译的段落——术语表在被注入前会先过滤为它实际包含的术语。
  */
 export function buildSystemPrompt(
   sourceLang: string,
@@ -114,20 +110,19 @@ export function buildSystemPrompt(
 
   const rules = LANGUAGE_RULES[`${sourceLang}→${targetLang}`] ?? GENERIC_RULES;
 
-  // Every replacement uses a function so `$&` / `$$` / `$'` inside the injected
-  // text are treated as literals. With a plain string replacement, a glossary
-  // term containing `$$` (or any `$`-pattern) would be silently mangled.
+  // 每处替换都使用函数，使注入文本中的 `$&` / `$$` / `$'` 被当作字面量。若用
+  // 普通字符串替换，含有 `$$`（或任何 `$` 模式）的术语会被悄悄破坏。
   return SYSTEM_PROMPT_TEMPLATE.replace('{sourceLang}', () => src)
     .replace('{targetLang}', () => tgt)
     .replace('{glossary}', () => glossaryText)
     .replace('{languageSpecificRules}', () => rules);
 }
 
-/** CJK code-point ranges, used to reason about adjacency without a tokenizer. */
+/** CJK 码点范围，用于在没有分词器的情况下判断相邻性。 */
 const CJK_CHAR = /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/;
 const CJK_RANGES = '\\u3040-\\u30ff\\u3400-\\u4dbf\\u4e00-\\u9fff\\uf900-\\ufaff';
 
-/** Zero-width marker used to park a replacement so it cannot be re-matched. */
+/** 用于暂存替换结果的零宽标记，避免它被再次匹配。 */
 const MARK = '\u0000';
 
 function escapeRegExp(literal: string): string {
@@ -135,12 +130,11 @@ function escapeRegExp(literal: string): string {
 }
 
 /**
- * Build the match pattern for one glossary source term.
+ * 为单个术语表的源术语构建匹配模式。
  *
- * A single CJK character is the dangerous case: as a bare substring it matches
- * inside any longer word, so the entry 王 -> Wang would corrupt 王国 into
- * Wang国. Requiring a non-CJK character on both sides confines such a term to
- * stand-alone occurrences. Longer terms are specific enough to match directly.
+ * 单个 CJK 字符是危险情形：作为裸子串它会匹配任意更长词内部的字符，因此条目
+ * 王 -> Wang 会把 王国 破坏成 Wang国。要求在两侧各有一个非 CJK 字符，即可把这类
+ * 术语限制在独立出现的场合。更长的术语足够具体，可直接匹配。
  */
 function termPattern(source: string): string {
   const escaped = escapeRegExp(source);
@@ -151,19 +145,16 @@ function termPattern(source: string): string {
 }
 
 /**
- * Apply a glossary to already-translated text.
+ * 把术语表应用到已翻译的文本上。
  *
- * Used by offline translation, where the NLLB model has no glossary awareness
- * and post-processing is the only option. Three rules keep it safe:
+ * 用于离线翻译：NLLB 模型没有术语表感知能力，后处理是唯一选择。三条规则保证安全：
  *
- *  1. Longer source terms run first, so 魔法师 wins over 魔法.
- *  2. Each replacement is parked behind a placeholder, so text produced by an
- *     earlier rule can never be re-matched by a later one (A->B plus B->C used
- *     to cascade).
- *  3. Single-character CJK terms must stand alone (see `termPattern`).
+ *  1. 较长的源术语先执行，因此 魔法师 优先于 魔法。
+ *  2. 每处替换先暂存在占位符之后，因此由先前规则产生的文本绝不会被后续规则再次
+ *     匹配（过去 A->B 与 B->C 会级联）。
+ *  3. 单字符 CJK 术语必须独立出现（见 `termPattern`）。
  *
- * Replacements are applied with a callback, so a target containing `$&` or `$$`
- * is inserted literally.
+ * 替换以回调方式应用，因此含有 `$&` 或 `$$` 的目标会被原样插入。
  */
 export function applyGlossaryToText(text: string, glossary: Glossary | null): string {
   if (!glossary || !glossary.entries.length) return text;

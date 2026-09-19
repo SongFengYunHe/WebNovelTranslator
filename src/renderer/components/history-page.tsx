@@ -1,10 +1,10 @@
 /**
- * HistoryPage (Part A2):
- *  - searchable, paginated table of saved translations (SQLite)
- *  - click a row to view full source + translation
- *  - "Re-translate" loads the source text back into the Translate tab
- *  - export the full history as CSV / JSON, or the current detail as EPUB
- *  - "Clear all" with a confirmation dialog
+ * HistoryPage（A2 部分）：
+ *  - 保存的翻译（SQLite）的可检索、分页表格
+ *  - 点击某行查看完整原文 + 译文
+ *  - 「重新翻译」把原文加载回「翻译」标签页
+ *  - 将全部历史导出为 CSV / JSON，或将当前详情导出为 EPUB
+ *  - 带确认对话框的「全部清除」
  *
  * 翻译历史页：支持检索/分页/详情/重新翻译/导出，并提供按天数清理
  * （清除30天前记录）以控制数据库体积增长。
@@ -55,7 +55,7 @@ export default function HistoryPage() {
       setItems(result.items);
       setTotal(result.total);
     } catch {
-      /* ignore — the history table stays empty on failure */
+      /* ignore —— 失败时历史表格保持为空 */
     } finally {
       setLoading(false);
     }

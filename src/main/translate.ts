@@ -1,11 +1,9 @@
 /**
- * Core OpenAI-compatible translation logic.
+ * 核心的 OpenAI 兼容翻译逻辑。
  *
- * A chapter is split into chunks (see `shared/chunking`), translated with
- * bounded concurrency, and each chunk is retried independently on transient
- * failures. Completed chunks are cached by content hash, which makes retrying
- * after a partial failure cheap: only the chunks that actually failed are
- * re-requested.
+ * 一个章节会被切成多个分块（见 `shared/chunking`），以受限并发进行翻译，每个
+ * 分块在遇到瞬时故障时独立重试。已完成的分块按内容哈希缓存，因此部分失败后
+ * 重试的代价很低：只有真正失败的分块会被重新请求。
  */
 import type { TranslateResult } from '../shared/types';
 import { friendlyApiError, friendlyNetworkError } from '../shared/api-errors';
@@ -16,12 +14,12 @@ import log from './logger';
 import { getSettings, normalizeBaseUrl } from './settings';
 import { cacheTranslation, getCachedTranslation, translationCacheKey } from './translation-cache';
 
-/** Per-request timeout, independent of the job-level cancellation signal. */
+/** 单次请求超时，独立于任务级的取消信号。 */
 const REQUEST_TIMEOUT_MS = 180_000;
 
 /**
- * Chunks translated in parallel. Deliberately low: provider rate limits are
- * usually per-account, and each chunk already retries on 429.
+ * 并行翻译的分块数。刻意保持较低：服务商的速率限制通常按账号计，且每个分块
+ * 遇到 429 时已会自行重试。
  */
 const MAX_CONCURRENT_CHUNKS = 3;
 
@@ -33,13 +31,13 @@ export interface ChatApiResponse {
 }
 
 export interface TranslateOptions {
-  /** Reports chunk completion so the UI can show progress. */
+  /** 上报分块完成情况，供界面显示进度。 */
   onProgress?: (done: number, total: number) => void;
 }
 
 /**
- * Result of translating one chunk. `retryable` is internal — it never reaches
- * the renderer, it only decides whether the retry loop continues.
+ * 单个分块的翻译结果。`retryable` 仅供内部使用——它永远不会传到渲染进程，
+ * 只用于决定重试循环是否继续。
  */
 interface ChunkOutcome {
   ok: boolean;
@@ -48,24 +46,23 @@ interface ChunkOutcome {
   retryable: boolean;
 }
 
-/** In-flight jobs, so a long chapter can be cancelled from the UI. */
+/** 进行中的任务，便于从界面取消长章节翻译。 */
 const activeJobs = new Set<AbortController>();
 
 /**
- * Abort every in-flight translation job. Called by the UI's cancel action and
- * by the shutdown path. Idempotent.
+ * 中止所有进行中的翻译任务。由界面的取消操作与退出流程调用。幂等。
  */
 export function cancelActiveJobs(): void {
   for (const job of activeJobs) job.abort();
   activeJobs.clear();
 }
 
-/** Call `<base>/chat/completions` with the current settings. */
+/** 使用当前设置调用 `<base>/chat/completions`。 */
 export async function callChatApi(body: unknown, signal?: AbortSignal): Promise<ChatApiResponse> {
   const settings = getSettings();
   const base = normalizeBaseUrl(settings.baseUrl);
 
-  // The request must stop on EITHER a timeout or a job cancellation.
+  // 请求必须在超时或任务取消「任一」情况下停止。
   const timeout = new AbortController();
   const timer = setTimeout(() => timeout.abort(), REQUEST_TIMEOUT_MS);
   const combined = signal ? anySignal([signal, timeout.signal]) : timeout.signal;
@@ -85,7 +82,7 @@ export async function callChatApi(body: unknown, signal?: AbortSignal): Promise<
     try {
       data = JSON.parse(text);
     } catch {
-      // Non-JSON body (e.g. proxy error page) — keep raw text for the message.
+      // 非 JSON 响应体（如代理错误页）——保留原始文本用于提示信息。
     }
     return { ok: res.ok, status: res.status, text, data };
   } finally {
@@ -93,7 +90,7 @@ export async function callChatApi(body: unknown, signal?: AbortSignal): Promise<
   }
 }
 
-/** One attempt at one chunk. Never throws — failures come back as outcomes. */
+/** 对单个分块的一次尝试。从不抛异常——失败以结果对象返回。 */
 async function requestChunk(
   chunk: string,
   systemPrompt: string,
@@ -125,13 +122,13 @@ async function requestChunk(
 
     const content = res.data?.choices?.[0]?.message?.content;
     if (typeof content !== 'string' || content.trim() === '') {
-      // A truncated or empty reply is usually a transient model hiccup.
+      // 被截断或为空的回复通常是模型的瞬时抖动。
       return { ok: false, text: '', error: '模型返回了空内容，请重试。', retryable: true };
     }
     return { ok: true, text: content, retryable: false };
   } catch (err) {
     const message = (err as Error).message;
-    // The job signal only fires on an explicit cancel; the timeout has its own.
+    // 任务信号只在显式取消时触发；超时另有自己的信号。
     if (signal.aborted) {
       return { ok: false, text: '', error: '已取消翻译。', retryable: false };
     }
@@ -144,7 +141,7 @@ async function requestChunk(
   }
 }
 
-/** One chunk, retried with exponential backoff on transient failures. */
+/** 单个分块，遇瞬时故障时以指数退避重试。 */
 async function translateChunkWithRetry(
   chunk: string,
   systemPrompt: string,
@@ -171,12 +168,10 @@ async function translateChunkWithRetry(
 }
 
 /**
- * Translate `text` using the currently saved settings.
+ * 使用当前已保存的设置翻译 `text`。
  *
- * `systemPrompt` is composed by the caller (UI / hotkey) and already has the
- * glossary filtered against the text. Long input is chunked; the chunks are
- * rejoined with a single newline, which is the separator the side-by-side view
- * splits on again.
+ * `systemPrompt` 由调用方（界面 / 全局快捷键）组装，其中的术语表已按文本过滤。
+ * 长文本会被分块；各分块用单个换行符重新拼接，这也是对照视图再次拆分时的分隔符。
  */
 export async function translateViaApi(
   text: string,
@@ -238,8 +233,8 @@ export async function translateViaApi(
   const failedIndex = results.findIndex((r) => !r?.ok);
   if (failedIndex !== -1) {
     const outcome = results[failedIndex];
-    // Tell the user WHICH part failed — with chunking in play, "翻译失败" alone
-    // gives no idea whether it was the first paragraph or the last.
+    // 告知用户「哪一部分」失败了——启用分块后，单说「翻译失败」无法判断
+    // 是首段还是末段出错。
     const where = chunks.length > 1 ? `第 ${failedIndex + 1}/${chunks.length} 段：` : '';
     log.error(`[translate] chunk ${failedIndex + 1}/${chunks.length} failed: ${outcome?.error}`);
     return { success: false, error: `${where}${outcome?.error ?? '翻译失败。'}` };

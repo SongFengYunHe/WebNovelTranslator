@@ -9,7 +9,7 @@ describe('isRetryableStatus', () => {
   });
 
   it('does not retry client errors that repeating cannot fix', () => {
-    // Retrying these only burns quota and delays the real error message.
+    // 重试这些只会浪费额度并推迟真正的错误信息。
     for (const status of [400, 401, 403, 404, 413, 422]) {
       expect(isRetryableStatus(status), `status ${status}`).toBe(false);
     }
@@ -38,7 +38,7 @@ describe('isRetryableError', () => {
 
 describe('backoffDelayMs', () => {
   it('grows exponentially', () => {
-    const maxJitter = () => 1; // jitter factor = 1
+    const maxJitter = () => 1; // 抖动因子 = 1
     expect(backoffDelayMs(1, maxJitter)).toBe(800);
     expect(backoffDelayMs(2, maxJitter)).toBe(1600);
     expect(backoffDelayMs(3, maxJitter)).toBe(3200);
@@ -62,7 +62,7 @@ describe('backoffDelayMs', () => {
   });
 
   it('spreads retries of parallel chunks apart', () => {
-    // Deterministic check: two different RNG draws must not give the same delay.
+    // 确定性检查：两次不同的随机数取值绝不能给出相同的延迟。
     expect(backoffDelayMs(3, () => 0)).not.toBe(backoffDelayMs(3, () => 1));
   });
 

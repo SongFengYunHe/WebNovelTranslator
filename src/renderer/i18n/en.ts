@@ -1,6 +1,6 @@
 /**
- * English UI strings. This object's keys define the `TranslationKey` type;
- * `zh.ts` must keep key parity (enforced by `Dictionary`).
+ * 英文界面文案。此对象的键定义了 `TranslationKey` 类型；
+ * `zh.ts` 必须保持键一致（由 `Dictionary` 强制）。
  */
 export const en = {
   'app.title': 'Web Novel Translator',
@@ -78,6 +78,8 @@ export const en = {
   'glossary.deleteConfirm': 'Delete glossary "{name}"?',
   'glossary.sourceTerm': 'Source term',
   'glossary.targetTerm': 'Target term',
+  'glossary.sourcePlaceholder': 'e.g. 火球术',
+  'glossary.targetPlaceholder': 'e.g. Fireball Technique',
   'glossary.rename': 'Rename',
   'glossary.delete': 'Delete',
   'glossary.removeRow': 'Remove row',

@@ -1,8 +1,8 @@
 /**
- * Minimal context-based i18n system.
- *  - English + Simplified Chinese dictionaries.
- *  - `translate(locale, key, params)` with `{param}` interpolation.
- *  - Falls back to English, then to the raw key, for any missing entry.
+ * 基于 Context 的精简 i18n 系统。
+ *  - 英文 + 简体中文两份词典。
+ *  - `translate(locale, key, params)`，支持 `{param}` 插值。
+ *  - 任何缺失条目会先回落到英文，再回落到原始键名。
  */
 import { en } from './en';
 import { zh } from './zh';

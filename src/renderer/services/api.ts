@@ -1,6 +1,6 @@
 /**
- * Thin renderer-side wrappers around window.electronAPI. All heavy lifting
- * (file IO, network calls, key handling, SQLite) happens in the main process.
+ * 渲染进程侧围绕 window.electronAPI 的轻量封装。所有繁重工作（文件 IO、网络调用、
+ * 密钥处理、SQLite）都在主进程中进行。
  */
 import type {
   EpubRequest,
@@ -23,7 +23,7 @@ export function apiTranslate(req: TranslateRequest): Promise<TranslateResult> {
   return window.electronAPI.translate(req);
 }
 
-/** Cancels the in-flight chunked translation job. */
+/** 取消进行中的分块翻译任务。 */
 export function apiCancelTranslate(): Promise<boolean> {
   return window.electronAPI.cancelTranslate();
 }
@@ -36,7 +36,7 @@ export function apiGetSettings(): Promise<SettingsPublic> {
   return window.electronAPI.getSettings();
 }
 
-/** Main-process subsystem health (currently the SQLite history database). */
+/** 主进程子系统健康状况（目前是 SQLite 历史数据库）。 */
 export function apiSystemHealth(): Promise<SystemHealth> {
   return window.electronAPI.systemHealth();
 }
@@ -106,7 +106,7 @@ export function apiOfflineStatus(): Promise<OfflineStatus> {
   return window.electronAPI.offlineStatus();
 }
 
-/** v3.0.1: kicks off the runtime model download (main-process fetch → cache). */
+/** v3.0.1：启动运行时模型下载（主进程 fetch → 缓存）。 */
 export function apiOfflineDownload(): Promise<OfflineStatus> {
   return window.electronAPI.downloadModel();
 }

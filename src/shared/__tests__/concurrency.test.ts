@@ -22,7 +22,7 @@ describe('runWithConcurrency', () => {
       inFlight -= 1;
     });
     expect(peak).toBeLessThanOrEqual(3);
-    // Guards against a degenerate implementation that serialises everything.
+    // 防止出现把所有任务串行化的退化实现。
     expect(peak).toBeGreaterThan(1);
   });
 
@@ -55,7 +55,7 @@ describe('runWithConcurrency', () => {
         completed += 1;
       })
     ).rejects.toThrow('boom');
-    // The remaining 30+ items must never have been picked up.
+    // 剩余的 30 多个条目必须从未被处理过。
     expect(completed).toBeLessThan(40);
   });
 

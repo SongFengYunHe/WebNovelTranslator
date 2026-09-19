@@ -1,7 +1,6 @@
 /**
- * Preload script - the only bridge between the sandboxed renderer and the
- * main process. Exposes a minimal, functions-only API via contextBridge.
- * The API key never crosses this boundary.
+ * 预加载脚本——沙箱化渲染进程与主进程之间唯一的桥梁。通过 contextBridge 暴露
+ * 一套最小化、仅含函数的 API。API 密钥绝不跨越此边界。
  */
 import { contextBridge, ipcRenderer } from 'electron';
 import type {
@@ -23,24 +22,24 @@ import type {
 } from '../shared/types';
 
 export interface ElectronApi {
-  // Popup window control
+  // 弹窗窗口控制
   panelClose: () => Promise<boolean>;
   panelMinimize: () => Promise<boolean>;
 
-  // Settings
+  // 设置
   getSettings: () => Promise<SettingsPublic>;
   saveSettings: (patch: SaveSettingsPatch) => Promise<SettingsPublic>;
   testConnection: () => Promise<TestConnectionResult>;
 
-  // Application health
+  // 应用健康状态
   systemHealth: () => Promise<SystemHealth>;
 
-  // Translation
+  // 翻译
   translate: (req: TranslateRequest) => Promise<TranslateResult>;
-  /** Cancels the in-flight chunked translation job. */
+  /** 取消进行中的分块翻译任务。 */
   cancelTranslate: () => Promise<boolean>;
 
-  // Glossary
+  // 术语表
   glossaryList: () => Promise<Glossary[]>;
   glossaryCreate: (name: string) => Promise<Glossary>;
   glossaryRename: (id: string, name: string) => Promise<Glossary[]>;
@@ -48,7 +47,7 @@ export interface ElectronApi {
   glossaryUpdateEntries: (id: string, entries: GlossaryEntry[]) => Promise<Glossary[]>;
   glossarySetActive: (id: string | null) => Promise<SettingsPublic>;
 
-  // History (Part A2)
+  // 历史记录（A2 部分）
   historyList: (query: HistoryQuery) => Promise<HistoryPage>;
   historyDelete: (id: number) => Promise<boolean>;
   historyClear: () => Promise<boolean>;
@@ -56,30 +55,30 @@ export interface ElectronApi {
   historyClearOlder: (days: number) => Promise<number>;
   historyExport: (kind: HistoryExport) => Promise<{ ok: boolean; filePath?: string; count?: number; error?: string }>;
 
-  // Auto-update (Part A1)
+  // 自动更新（A1 部分）
   updateCheck: () => Promise<UpdateCheckResult>;
   updateOpenDownload: () => Promise<boolean>;
   updateCheckAndPrompt: () => Promise<UpdateCheckResult>;
 
-  // Global hotkey (Part A3)
+  // 全局快捷键（A3 部分）
   hotkeySet: (accelerator: string) => Promise<{ ok: boolean; reason?: string }>;
 
-  // Offline translation (Part A4)
+  // 离线翻译（A4 部分）
   offlineStatus: () => Promise<OfflineStatus>;
   offlineDownload: () => Promise<OfflineStatus>;
-  /** v3.0.1: runtime download of the offline model (fetch from Hugging Face). */
+  /** v3.0.1：运行时下载离线模型（从 Hugging Face 拉取）。 */
   downloadModel: () => Promise<OfflineStatus>;
   offlineDisable: () => Promise<OfflineStatus>;
   offlineTranslate: (req: TranslateRequest) => Promise<TranslateResult>;
 
-  // EPUB export (Part A5)
+  // EPUB 导出（A5 部分）
   epubExport: (req: EpubRequest) => Promise<{ ok: boolean; filePath?: string; error?: string }>;
 
-  // Main-process → renderer events
+  // 主进程 → 渲染进程事件
   onHotkeyResult: (cb: (payload: { original: string; translated: string }) => void) => () => void;
   onOfflineProgress: (cb: (status: OfflineStatus) => void) => () => void;
   onNotify: (cb: (payload: { title: string; body: string }) => void) => () => void;
-  /** Chunk progress for a long, chunked translation job. */
+  /** 长耗时、分块翻译任务的分块进度。 */
   onTranslateProgress: (cb: (progress: TranslateProgress) => void) => () => void;
 }
 

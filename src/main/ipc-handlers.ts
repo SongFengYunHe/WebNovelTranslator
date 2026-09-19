@@ -1,11 +1,9 @@
 /**
- * All IPC handlers. File system access, encrypted settings storage, SQLite
- * history, EPUB export, the update check and the OpenAI-compatible HTTP calls
- * all live here, in the main process.
+ * 所有 IPC 处理器。文件系统访问、加密设置存储、SQLite 历史、EPUB 导出、
+ * 更新检查以及 OpenAI 兼容的 HTTP 调用都位于此处——主进程中。
  *
- * Every payload is validated before it reaches an implementation (see
- * `./ipc-validate`). The renderer is sandboxed, but it hosts arbitrary page
- * content in the Browser tab, so these channels are a real trust boundary.
+ * 每个载荷在到达实现之前都会被校验（见 `./ipc-validate`）。渲染进程处于沙箱中，
+ * 但它会在「浏览器」标签页承载任意页面内容，因此这些通道是真正的信任边界。
  */
 import { dialog, ipcMain, shell, type BrowserWindow } from 'electron';
 import fs from 'fs';
@@ -59,13 +57,13 @@ import { exportEpub } from './services/epub';
 
 export interface IpcContext {
   getMainWindow: () => BrowserWindow | null;
-  /** Re-register the global hotkey from current settings (after a settings change). */
+  /** 从当前设置重新注册全局快捷键（设置变更后调用）。 */
   reloadHotkey: () => { ok: boolean; reason?: string };
-  /** Show a tray-style notification to the user. */
+  /** 向用户显示一条托盘式通知。 */
   notify: (title: string, body: string) => void;
 }
 
-/** Translate + record to history (single source of truth for every online path). */
+/** 翻译并记录到历史（所有在线路径的唯一事实来源）。 */
 async function translateAndRecord(
   req: TranslateRequest,
   onProgress?: (done: number, total: number) => void
@@ -86,12 +84,11 @@ async function translateAndRecord(
 }
 
 /**
- * Register an IPC handler with uniform validation-error handling.
+ * 注册一个带统一校验错误处理的 IPC 处理器。
  *
- * Each handler validates its own payload, so the implementation body only ever
- * sees a typed value. A rejected payload is logged once here and rethrown,
- * which surfaces as a rejected promise in the renderer instead of a silent
- * no-op that looks like success.
+ * 每个处理器自行校验其载荷，因此实现主体只会看到已定型的值。被拒绝的载荷会在
+ * 此处记录一次日志并重新抛出，在渲染进程中表现为 rejected promise，而不是看起来
+ * 成功的静默空操作。
  */
 function handle(channel: string, fn: (...args: unknown[]) => unknown): void {
   ipcMain.handle(channel, async (_event, ...args: unknown[]) => {
@@ -107,15 +104,15 @@ function handle(channel: string, fn: (...args: unknown[]) => unknown): void {
 }
 
 export function registerIpcHandlers(ctx: IpcContext): void {
-  // ---- Popup window control ---------------------------------------------------
+  // ---- 弹窗窗口控制 -----------------------------------------------------------
   handle('panel:close', () => {
     const mw = ctx.getMainWindow();
     if (mw && !mw.isDestroyed()) mw.hide();
     return true;
   });
 
-  // v3.0.1: native minimize — the window stays on the Taskbar (tray keeps
-  // running). No hide()/preventDefault() involved.
+  // v3.0.1：原生最小化——窗口保留在任务栏上（托盘继续运行）。
+  // 不涉及 hide()/preventDefault()。
   handle('panel:minimize', () => {
     const mw = ctx.getMainWindow();
     if (mw && !mw.isDestroyed()) {
@@ -125,7 +122,7 @@ export function registerIpcHandlers(ctx: IpcContext): void {
     return true;
   });
 
-  // ---- Settings ---------------------------------------------------------------
+  // ---- 设置 -------------------------------------------------------------------
   handle('settings:get', () => toPublic(getSettings()));
 
   handle('settings:set', (raw) => updateSettings(validateSaveSettingsPatch(raw)));
@@ -135,9 +132,9 @@ export function registerIpcHandlers(ctx: IpcContext): void {
     if (!settings.apiKey) {
       return { success: false, message: '尚未配置 API 密钥。' };
     }
-    // Probe with a real (tiny) completion instead of GET /models: plenty of
-    // OpenAI-compatible endpoints — Azure, Ollama proxies, assorted gateways —
-    // do not implement /models and would report a false failure.
+    // 用一次真实的（极小的）completion 探测，而不是 GET /models：许多
+    // OpenAI 兼容端点——Azure、Ollama 代理、各类网关——并未实现 /models，
+    // 那样会报告一次误判的失败。
     const base = normalizeBaseUrl(settings.baseUrl);
     const started = Date.now();
     try {
@@ -174,12 +171,12 @@ export function registerIpcHandlers(ctx: IpcContext): void {
     }
   });
 
-  // ---- Health ------------------------------------------------------------------
-  // Surfaced to the UI so a failed SQLite initialisation is visible instead of
-  // silently degrading every history feature into a no-op.
+  // ---- 健康状态 ----------------------------------------------------------------
+  // 呈现给界面，使 SQLite 初始化失败可见，而不是把每项历史功能
+  // 静默降级成空操作。
   handle('system:health', () => ({ database: getDatabaseStatus() }));
 
-  // ---- Translation -------------------------------------------------------------
+  // ---- 翻译 -------------------------------------------------------------------
   handle('translate', (raw) =>
     translateAndRecord(validateTranslateRequest(raw), (done, total) => {
       const mw = ctx.getMainWindow();
@@ -187,15 +184,14 @@ export function registerIpcHandlers(ctx: IpcContext): void {
     })
   );
 
-  // Cancels every in-flight chunk request for the current job. Chunks that
-  // already completed stay cached, so retrying afterwards only re-requests the
-  // ones that were actually interrupted.
+  // 取消当前任务中每个在途的分块请求。已完成的分块仍留在缓存中，
+  // 因此之后重试只会重新请求那些确实被中断的分块。
   handle('translate:cancel', () => {
     cancelActiveJobs();
     return true;
   });
 
-  // ---- Glossary CRUD -------------------------------------------------------------
+  // ---- 术语表 CRUD -------------------------------------------------------------
   handle('glossary:list', () => loadGlossaries());
 
   handle('glossary:create', (rawName) => createGlossary(validateGlossaryName(rawName)));
@@ -221,7 +217,7 @@ export function registerIpcHandlers(ctx: IpcContext): void {
     updateSettings({ activeGlossaryId: validateActiveGlossaryId(rawId) })
   );
 
-  // ---- Translation history (Part A2) -------------------------------------------
+  // ---- 翻译历史（A2 部分）-----------------------------------------------------
   handle('history:list', (raw) => queryHistory(validateHistoryQuery(raw)));
 
   handle('history:delete', (raw) => deleteHistory(validateHistoryId(raw)));
@@ -275,7 +271,7 @@ export function registerIpcHandlers(ctx: IpcContext): void {
     }
   });
 
-  // ---- Auto-update (Part A1) -----------------------------------------------------
+  // ---- 自动更新（A1 部分）-----------------------------------------------------
   handle('update:check', (): Promise<UpdateCheckResult> => checkForUpdates(ctx.getMainWindow));
 
   handle('update:open-download', () => {
@@ -283,7 +279,7 @@ export function registerIpcHandlers(ctx: IpcContext): void {
     return true;
   });
 
-  // Tray "Check for Updates" flow (dialog prompt in the main process).
+  // 托盘「检查更新」流程（对话框提示在主进程中完成）。
   handle('update:check-and-prompt', async (): Promise<UpdateCheckResult> => {
     const result = await checkForUpdates(ctx.getMainWindow);
     if (result.available && result.version) {
@@ -294,27 +290,26 @@ export function registerIpcHandlers(ctx: IpcContext): void {
     return result;
   });
 
-  // ---- Global hotkey (Part A3) -----------------------------------------------------
+  // ---- 全局快捷键（A3 部分）----------------------------------------------------
   handle('hotkey:set', (raw) => {
     updateSettings({ hotkey: validateHotkey(raw) });
     return ctx.reloadHotkey();
   });
 
-  // ---- Offline translation (Part A4) ------------------------------------------------
+  // ---- 离线翻译（A4 部分）------------------------------------------------------
   handle('offline:status', () => getOfflineStatus());
 
   /**
-   * v3.0.1: runtime model download. `download-model` is the primary channel
-   * (wired to the settings checkbox / download button); `offline:download`
-   * remains as a backward-compatible alias. Progress streams to the renderer
-   * via webContents.send('offline:progress') from the main process (the
-   * correct direction for download-progress reporting).
+   * v3.0.1：运行时模型下载。`download-model` 是主通道
+   * （接入设置里的复选框 / 下载按钮）；`offline:download` 保留为向后兼容的别名。
+   * 进度由主进程通过 webContents.send('offline:progress') 流向渲染进程
+   * （这是上报下载进度的正确方向）。
    */
   const startModelDownload = async () => {
     const result = await ensureModel();
     if (result.ok) {
-      // `downloaded` is derived from the files on disk, so only the user's
-      // intent needs persisting here.
+      // `downloaded` 由磁盘上的文件推导得出，因此此处只需持久化用户的
+      // 意愿。
       updateSettings({ offlineEnabled: true });
     }
     return getOfflineStatus();
@@ -326,8 +321,8 @@ export function registerIpcHandlers(ctx: IpcContext): void {
 
   handle('offline:disable', () => {
     updateSettings({ offlineEnabled: false });
-    // disposeOfflineModel is called lazily by translateOffline's guard; keep the
-    // cached pipeline so re-enabling without a re-download still works.
+    // disposeOfflineModel 由 translateOffline 的守卫惰性调用；保留已缓存的
+    // 流水线，这样重新启用而无需重新下载仍然可用。
     return getOfflineStatus();
   });
 
@@ -337,6 +332,6 @@ export function registerIpcHandlers(ctx: IpcContext): void {
     return translateOffline(req.text, settings.sourceLang, settings.targetLang, settings.activeGlossaryId);
   });
 
-  // ---- EPUB export (Part A5) --------------------------------------------------------
+  // ---- EPUB 导出（A5 部分）-----------------------------------------------------
   handle('epub:export', (raw) => exportEpub(ctx.getMainWindow, validateEpubRequest(raw)));
 }

@@ -1,9 +1,9 @@
 /**
- * Window state persistence (Part E6): save & restore the main panel's bounds
- * via electron-store, so the app reopens where the user left it.
+ * 窗口状态持久化（E6 部分）：通过 electron-store 保存并恢复主面板的位置与尺寸，
+ * 让应用在用户上次离开的地方重新打开。
  *
- * Values are validated before being applied to a BrowserWindow, so a stale or
- * corrupted store entry can never create an off-screen window.
+ * 值在应用到 BrowserWindow 之前会先校验，因此陈旧或损坏的存储条目绝不会创建出
+ * 屏幕外的窗口。
  *
  * 窗口状态恢复守卫：保存的坐标若已不在当前显示器工作区内（例如显示器被拔掉），
  * 则返回 undefined，主进程会回退到默认居中位置，避免窗口在屏幕外无法找回。
@@ -28,7 +28,7 @@ const store = new Store<WindowStateStore>({
   defaults: {},
 });
 
-/** True when `bounds` intersects a currently connected display. */
+/** 当 `bounds` 与当前连接的某个显示器相交时为 true。 */
 function isVisibleOnSomeDisplay(bounds: Bounds): boolean {
   const w = Math.max(bounds.width, 0);
   const h = Math.max(bounds.height, 0);
@@ -37,8 +37,8 @@ function isVisibleOnSomeDisplay(bounds: Bounds): boolean {
     const a = d.workArea;
     const overlapW = Math.max(0, Math.min(a.x + a.width, bounds.x + w) - Math.max(a.x, bounds.x));
     const overlapH = Math.max(0, Math.min(a.y + a.height, bounds.y + h) - Math.max(a.y, bounds.y));
-    // Require a meaningful overlap (≥ 100x100 px) so a window that slid off a
-    // monitor that was unplugged gets re-centered instead of restored invisible.
+    // 要求有实质重叠（≥ 100x100 px），这样滑出已拔掉显示器的窗口会被重新居中，
+    // 而不是恢复到不可见的位置。
     return overlapW >= 100 && overlapH >= 100;
   });
 }

@@ -56,7 +56,7 @@ src/
 
 ### Scope（可选，但推荐）
 
-用小写英文标明影响范围，例如：`bubble`、`settings`、`history`、`ipc`、`offline`、`epub`、`ui`。
+用小写英文标明影响范围，例如：`translate`、`offline`、`glossary`、`history`、`settings`、`security`、`db`、`ipc`、`ui`、`i18n`、`packaging`、`update`。
 
 ### Description
 
@@ -66,7 +66,7 @@ src/
 
 ```
 feat(translator): 增加离线翻译支持
-fix(bubble): 修复悬浮球拖出屏幕的问题
+fix(hotkey): 修复划词取词在部分程序下失效的问题
 chore: 升级 electron 至 30.x
 docs: 补充 README 构建说明
 perf(history): 优化历史列表分页查询
@@ -86,7 +86,7 @@ perf(history): 优化历史列表分页查询
 vX.Y.Z - 简短中文描述
 ```
 
-例如：`v2.0.1 - 修复悬浮球越界与清理优化`
+例如：`v2.0.1 - 修复退出残留进程并清理定时器`
 
 ### Release Notes 模板
 

@@ -1,7 +1,7 @@
 /**
- * Minimal ambient declarations for CommonJS modules that ship no typings.
- * The runtime shapes are small and stable; keeping the shims here avoids
- * `noImplicitAny` failures without pulling in unrelated `@types` packages.
+ * 为未附带类型声明的 CommonJS 模块提供最小化的环境声明。
+ * 这些模块的运行时形状很小且稳定；把垫片放在这里可避免 `noImplicitAny` 报错，
+ * 又无需引入无关的 `@types` 包。
  */
 declare module 'epub-gen' {
   interface EpubContentItem {

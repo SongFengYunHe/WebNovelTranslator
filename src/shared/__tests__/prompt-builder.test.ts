@@ -43,12 +43,12 @@ describe('buildSystemPrompt', () => {
   });
 
   it('uses the pair-specific rules when one exists', () => {
-    // ja→zh explicitly calls out kanji name conversion.
+    // ja→zh 明确要求把日文汉字名转换为中文。
     expect(buildSystemPrompt('ja', 'zh', null, 'テキスト')).toContain('结城明日奈');
   });
 
   it('falls back to the generic rules for an unlisted pair', () => {
-    // zh→ko has no entry in LANGUAGE_RULES.
+    // zh→ko 在 LANGUAGE_RULES 中没有条目。
     expect(buildSystemPrompt('zh', 'ko', null, '文本')).toContain('Preserve proper nouns');
   });
 
@@ -58,7 +58,7 @@ describe('buildSystemPrompt', () => {
       name: 'money',
       entries: [{ source: '灵石', target: 'costs $$5 & $& more' }],
     };
-    // A plain string replacement would collapse `$$` → `$` and expand `$&`.
+    // 普通字符串替换会把 `$$` 折叠成 `$`，并展开 `$&`。
     expect(buildSystemPrompt('zh', 'en', dollar, '灵石')).toContain('costs $$5 & $& more');
   });
 });
@@ -130,7 +130,7 @@ describe('applyGlossaryToText', () => {
         { source: '乙', target: '丙' },
       ],
     };
-    // 甲 -> 乙, and the freshly produced 乙 must NOT then become 丙.
+    // 甲 -> 乙，而刚产生的 乙「不能」随后再变成 丙。
     expect(applyGlossaryToText('甲', chained)).toBe('乙');
   });
 
@@ -140,9 +140,9 @@ describe('applyGlossaryToText', () => {
       name: 'single',
       entries: [{ source: '王', target: 'Wang' }],
     };
-    // 王 appears inside 王国 / 王子, so it must be left alone...
+    // 王 出现在 王国 / 王子 内部，因此必须保持不变……
     expect(applyGlossaryToText('王国与王子', single)).toBe('王国与王子');
-    // ...but a stand-alone occurrence is still translated.
+    // ……但独立出现时仍会被翻译。
     expect(applyGlossaryToText('王，你来了', single)).toBe('Wang，你来了');
   });
 
@@ -161,7 +161,7 @@ describe('applyGlossaryToText', () => {
       name: 'meta',
       entries: [{ source: 'a.c', target: 'X' }],
     };
-    // The dot must not act as a wildcard.
+    // 点号不能充当通配符。
     expect(applyGlossaryToText('a.c abc', meta)).toBe('X abc');
   });
 

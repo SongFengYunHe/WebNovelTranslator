@@ -8,8 +8,8 @@ import GlossaryEditor from './components/glossary-editor';
 import HistoryPage from './components/history-page';
 import SettingsPage from './components/settings-page';
 
-// v3.0.0: Glossary is a core feature — promoted to sit right after Translate
-// and before Settings so it is always one click away from translating.
+// v3.0.0：术语表是核心功能——被提升到紧跟在「翻译」之后、「设置」之前，
+// 使其始终距翻译仅一次点击。
 const TABS: { id: TabId; labelKey: TranslationKey }[] = [
   { id: 'translate', labelKey: 'app.tabs.translate' },
   { id: 'glossary', labelKey: 'app.tabs.glossary' },
@@ -27,13 +27,13 @@ export default function App() {
     document.title = t('app.title');
   }, [t]);
 
-  // Part E7: friendly onboarding banner when nothing is configured yet.
+  // E7 部分：尚未配置任何内容时的友好引导横幅。
   // 配置了 API 密钥或开启离线模式后永久隐藏，避免遮挡主内容。
   const showOnboarding =
     settings && !settings.hasApiKey && !offlineStatus.enabled;
 
-  // Part P1: the history database degrades to a no-op instead of crashing the
-  // app. Say so explicitly rather than showing an empty history list forever.
+  // P1 部分：历史数据库会降级为空操作而不是让应用崩溃。明确说明这一点，
+  // 而不是永远显示空的历史列表。
   const dbUnavailable = health !== null && !health.database.ok;
 
   return (
@@ -53,8 +53,8 @@ export default function App() {
             </button>
           ))}
         </nav>
-        {/* v3.0.1: real minimize — window stays on the Taskbar; hiding is
-            done via the ✕ button or the tray menu. */}
+        {/* v3.0.1：真正的「最小化」——窗口保留在任务栏上；隐藏则通过 ✕
+            按钮或托盘菜单完成。 */}
         <button
           className="icon-btn window-btn"
           title={t('app.minimize')}
@@ -62,7 +62,7 @@ export default function App() {
         >
           –
         </button>
-        {/* v3.0.0: clearly visible Close button on the frameless popup window. */}
+        {/* v3.0.0：无边框弹窗上清晰可见的关闭按钮。 */}
         <button
           className="icon-btn window-btn close"
           title={t('app.closeWindow')}
