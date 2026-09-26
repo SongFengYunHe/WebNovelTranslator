@@ -43,11 +43,79 @@ const dynamicImport = new Function('specifier', 'return import(specifier)') as (
 const MODEL_ID = 'Xenova/nllb-200-distilled-600M';
 
 /**
- * Hugging Face 主机。可通过 `WNT_HF_HOST` 覆盖，使模型能从镜像（如
- * `https://hf-mirror.com`）拉取，用于 huggingface.co 不可达的网络。
+ * 模型主机候选列表，按顺序尝试。
+ *
+ * 默认是 `huggingface.co` → `hf-mirror.com`：前者在部分网络（如国内）会直接
+ * 连接失败，用户又不一定能去设环境变量，所以在网络层失败时自动切到镜像——
+ * 这正是「离线翻译一直下不下来」的根因。
+ *
+ * `WNT_HF_HOST` 可用逗号分隔多个主机来完全接管这个列表，例如
+ * `WNT_HF_HOST=https://hf-mirror.com` 或 `https://a.example,https://b.example`。
  */
-const HF_HOST = (process.env.WNT_HF_HOST || 'https://huggingface.co').replace(/\/+$/, '');
-const HF_BASE = `${HF_HOST}/${MODEL_ID}`;
+const HF_HOSTS = (
+  process.env.WNT_HF_HOST || 'https://huggingface.co,https://hf-mirror.com'
+)
+  .split(',')
+  .map((h) => h.trim().replace(/\/+$/, ''))
+  .filter(Boolean);
+
+/** 当前正在使用的主机下标；网络失败时前进到下一个。 */
+let hostIndex = 0;
+
+/** 当前主机（下载 URL 与 tree 请求都以它为准）。 */
+function currentHost(): string {
+  return HF_HOSTS[Math.min(hostIndex, HF_HOSTS.length - 1)];
+}
+
+/**
+ * 把一个主机换成下一个候选。
+ *
+ * 只在「网络层失败」时调用——HTTP 4xx/5xx 说明主机是通的（文件不存在或限流），
+ * 换主机没有意义。返回 false 表示候选已用尽。
+ */
+function advanceHost(reason: string): boolean {
+  if (hostIndex >= HF_HOSTS.length - 1) return false;
+  hostIndex += 1;
+  log.warn(`[offline] ${reason} — switching to fallback host ${currentHost()}`);
+  return true;
+}
+
+/** 判断一个错误是否属于「这台主机连不上」，而不是「这台主机拒绝了请求」。 */
+function isTransportError(err: unknown): boolean {
+  return /fetch failed|network|ENOTFOUND|ECONNREFUSED|ECONNRESET|ETIMEDOUT|EAI_AGAIN|socket hang up|aborted|timeout/i.test(
+    (err as Error)?.message ?? ''
+  );
+}
+
+/** 把仓库相对路径解析为当前主机上的下载 URL。 */
+function resolveUrl(filePath: string): string {
+  return `${currentHost()}/${MODEL_ID}/resolve/main/${encodeURI(filePath)}`;
+}
+
+/**
+ * 按候选顺序请求模型仓库。
+ *
+ * 连接不上当前主机时自动前进到下一个候选，并用新主机重试同一个请求；
+ * HTTP 4xx/5xx 不换主机（主机是通的，换过去也一样）。全部候选都连不上时抛出
+ * 最后一个错误，由调用方按网络失败处理。
+ */
+async function fetchFromModelRepo(pathname: string, init?: RequestInit): Promise<Response> {
+  let lastErr: unknown = null;
+  for (let attempt = 0; attempt <= HF_HOSTS.length; attempt++) {
+    const host = currentHost();
+    try {
+      return await fetch(`${host}/${pathname}`, init);
+    } catch (err) {
+      lastErr = err;
+      if (!isTransportError(err)) throw err;
+      // 并发下载时可能多个请求同时失败。只有「失败的这个请求所用的主机仍是当前
+      // 主机」才推进候选，否则会被一次失败推着跳过好几个主机。
+      if (currentHost() !== host) continue;
+      if (!advanceHost(`${(err as Error).message} on ${host}`)) break;
+    }
+  }
+  throw lastErr ?? new Error(mt('main.offline.unknownError'));
+}
 
 /** 下载失败时的最大重试次数（离线模型下载健壮性）。 */
 const MAX_DOWNLOAD_RETRIES = 3;
@@ -243,11 +311,6 @@ function resetTransient(): void {
   state.error = null;
 }
 
-/** 把仓库相对路径解析为它在 Hugging Face 上的下载 URL。 */
-function resolveUrl(filePath: string): string {
-  return `${HF_BASE}/resolve/main/${encodeURI(filePath)}`;
-}
-
 // ---- 文件清单 --------------------------------------------------------------
 
 /**
@@ -256,10 +319,9 @@ function resolveUrl(filePath: string): string {
  */
 async function resolveModelFileList(): Promise<ModelFile[]> {
   try {
-    const res = await fetch(
-      `${HF_HOST}/api/models/${MODEL_ID}/tree/main?recursive=true`,
-      { signal: AbortSignal.timeout(30_000) }
-    );
+    const res = await fetchFromModelRepo(`api/models/${MODEL_ID}/tree/main?recursive=true`, {
+      signal: AbortSignal.timeout(30_000),
+    });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const tree = (await res.json()) as {
       path?: string;
@@ -339,7 +401,7 @@ async function downloadOneFile(f: ModelFile): Promise<void> {
     let attemptBytes = 0;
 
     try {
-      const res = await fetch(resolveUrl(f.path));
+      const res = await fetchFromModelRepo(`${MODEL_ID}/resolve/main/${encodeURI(f.path)}`);
       if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
 
       const counter = new Transform({
@@ -391,6 +453,10 @@ function updateProgressFromBytes(): void {
  */
 async function downloadModelFiles(): Promise<void> {
   fs.mkdirSync(modelDir(), { recursive: true });
+  // 每次「下载」动作都从首选主机重新开始：网络环境可能变了（切了代理/VPN），
+  // 而失败一次就永久钉在镜像上会让恢复的人白白多绕一圈。一次下载内部则保持粘性，
+  // 不会每个文件都重新踩一遍连不上的主机。
+  hostIndex = 0;
   const files = await resolveModelFileList();
 
   // 通过 HEAD 补齐未知大小（静态回落清单 / tree 返回的异常结果）。
@@ -399,10 +465,10 @@ async function downloadModelFiles(): Promise<void> {
       .filter((f) => !f.size)
       .map(async (f) => {
         try {
-          const head = await fetch(resolveUrl(f.path), {
-            method: 'HEAD',
-            signal: AbortSignal.timeout(20_000),
-          });
+          const head = await fetchFromModelRepo(
+            `${MODEL_ID}/resolve/main/${encodeURI(f.path)}`,
+            { method: 'HEAD', signal: AbortSignal.timeout(20_000) }
+          );
           const len = Number(head.headers.get('content-length'));
           if (head.ok && Number.isFinite(len) && len > 0) f.size = len;
         } catch {
@@ -436,7 +502,8 @@ async function loadTransformers(): Promise<any> {
   // 文件，而不是重新拉取。
   mod.env.cacheDir = modelCacheDir();
   mod.env.allowRemoteModels = true;
-  mod.env.remoteHost = HF_HOST;
+  // 用实际下载成功的那台主机：万一有文件缺失，引擎也不会又去撞那台连不上的。
+  mod.env.remoteHost = currentHost();
   mod.env.progress = (info: {
     status: string;
     file: string;
@@ -527,7 +594,7 @@ export async function ensureModel(): Promise<{ ok: boolean; error?: string }> {
     state.totalBytes = null;
     state.error =
       /network|fetch|ECONNREFUSED|ENOTFOUND|timed? ?out|aborted|503|429/i.test(msg)
-        ? mt('main.offline.downloadFailedNetwork')
+        ? mt('main.offline.downloadFailedNetwork', { hosts: HF_HOSTS.join(' / ') })
         : mt('main.offline.downloadFailed', { msg });
     emitStatus();
     return { ok: false, error: state.error };
@@ -587,6 +654,17 @@ export async function translateOffline(
     log.error('[offline] translation failed:', err);
     return { success: false, error: mt('main.offline.translateFailed', { msg: (err as Error).message }) };
   }
+}
+
+/**
+ * 清掉上一次失败的红色提示。
+ *
+ * 用户关掉「启用离线翻译」时调用：否则界面会出现「复选框是空的，却挂着一条下载
+ * 失败横幅」这种自相矛盾的状态——用户反馈的就是这个。
+ */
+export function clearOfflineError(): void {
+  // 下载仍在进行时不动：此时 error 属于上一轮，而进度条才是当前状态。
+  if (!state.downloading) state.error = null;
 }
 
 /** 释放流水线（退出 / 禁用离线模式时使用）。 */

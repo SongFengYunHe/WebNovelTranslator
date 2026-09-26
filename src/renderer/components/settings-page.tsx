@@ -322,9 +322,12 @@ export default function SettingsPage() {
                   ⚠ {t('settings.offlineError', { msg: offlineStatus.error })}
                 </div>
               )}
-              {offlineStatus.enabled && !offlineStatus.downloaded && !offlineStatus.downloading && (
+              {/* 只要模型还没下完就保留入口。之前这个按钮挂在「已启用」上，
+                  而启用状态只会在下载成功后落盘——于是一次失败就把用户堵在
+                  「没有模型、也没法重试」的死角里。 */}
+              {!offlineStatus.downloaded && !offlineStatus.downloading && (
                 <button className="btn small" onClick={() => void apiOfflineDownload()}>
-                  {t('settings.offlineDownload')}
+                  {offlineStatus.error ? t('settings.offlineRetry') : t('settings.offlineDownload')}
                 </button>
               )}
             </>

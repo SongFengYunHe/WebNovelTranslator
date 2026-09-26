@@ -53,7 +53,12 @@ import {
 } from './services/db';
 import { cancelActiveJobs, translateViaApi } from './translate';
 import { checkForUpdates } from './services/update';
-import { ensureModel, getOfflineStatus, translateOffline } from './services/offline';
+import {
+  clearOfflineError,
+  ensureModel,
+  getOfflineStatus,
+  translateOffline,
+} from './services/offline';
 import { exportEpub } from './services/epub';
 
 export interface IpcContext {
@@ -323,6 +328,8 @@ export function registerIpcHandlers(ctx: IpcContext): void {
 
   handle('offline:disable', () => {
     updateSettings({ offlineEnabled: false });
+    // 关掉开关就没必要再挂着上一次的失败横幅。
+    clearOfflineError();
     // disposeOfflineModel 由 translateOffline 的守卫惰性调用；保留已缓存的
     // 流水线，这样重新启用而无需重新下载仍然可用。
     return getOfflineStatus();

@@ -160,6 +160,7 @@ export const zh: Record<TranslationKey, string> = {
   'settings.offlineEngineMissing':
     '当前安装包未包含离线翻译引擎（为控制体积而未打包），因此无法启用离线翻译。在线翻译不受影响。',
   'settings.offlineDownload': '下载模型',
+  'settings.offlineRetry': '重试下载',
   'settings.offlineDownloading': '下载中… {pct}%',
   'settings.offlineDownloadingMb': '下载模型中: {loaded}MB / {total}MB',
   'settings.offlineDownloaded': '✓ 模型已就绪',
@@ -251,7 +252,8 @@ export const zh: Record<TranslationKey, string> = {
   'main.offline.downloading': '模型正在下载中，请稍候…',
   'main.offline.incomplete': '模型文件不完整，请重试下载。',
   'main.offline.initFailed': '离线翻译引擎初始化失败：{msg}',
-  'main.offline.downloadFailedNetwork': '离线模型下载失败，请检查网络后重试。',
+  'main.offline.downloadFailedNetwork':
+    '离线模型下载失败：无法连接模型仓库（已尝试 {hosts}），请检查网络后重试。',
   'main.offline.downloadFailed': '离线模型下载失败：{msg}',
   'main.offline.notEnabled': '离线翻译未启用，请在设置中开启。',
   'main.offline.notReady': '离线翻译引擎尚未就绪，请稍后重试。',

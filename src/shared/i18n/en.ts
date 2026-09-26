@@ -169,6 +169,7 @@ export const en = {
   'settings.offlineEngineMissing':
     'This build does not include the offline translation engine (left out to keep the installer small), so offline mode cannot be enabled. Online translation is unaffected.',
   'settings.offlineDownload': 'Download model',
+  'settings.offlineRetry': 'Retry download',
   'settings.offlineDownloading': 'Downloading… {pct}%',
   'settings.offlineDownloadingMb': 'Downloading model: {loaded}MB / {total}MB',
   'settings.offlineDownloaded': '✓ Model ready',
@@ -264,7 +265,7 @@ export const en = {
   'main.offline.incomplete': 'The model files are incomplete — please retry the download.',
   'main.offline.initFailed': 'Failed to initialize the offline engine: {msg}',
   'main.offline.downloadFailedNetwork':
-    'Model download failed — check your network connection and try again.',
+    'Model download failed — could not reach the model repository (tried {hosts}). Check your network and try again.',
   'main.offline.downloadFailed': 'Model download failed: {msg}',
   'main.offline.notEnabled': 'Offline translation is not enabled — turn it on in Settings.',
   'main.offline.notReady': 'The offline engine is not ready yet — please try again shortly.',
