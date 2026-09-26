@@ -28,14 +28,17 @@
 
 ## 📥 安装
 
-从 [Releases 页面](https://github.com/SongFengYunHe/WebNovelTranslator/releases) 下载。每个版本提供 **两种安装形态 × 两个版本**，**任选一个文件**即可：
+从 [Releases 页面](https://github.com/SongFengYunHe/WebNovelTranslator/releases) 下载。**按需二选一**：
 
-| 文件 | 版本 | 形态 | 体积 |
-| --- | --- | --- | --- |
-| `WebNovelTranslator-Setup-<版本号>.exe` | 标准版 | 安装版（可自定义目录、建桌面快捷方式） | 约 69 MB |
-| `WebNovelTranslator-<版本号>-portable.exe` | 标准版 | 免安装便携版 | 约 69 MB |
-| `WebNovelTranslator-Offline-Setup-<版本号>.exe` | **离线版** | 安装版 | 约 82 MB |
-| `WebNovelTranslator-Offline-<版本号>-portable.exe` | **离线版** | 免安装便携版 | 约 82 MB |
+| 文件 | 版本 | 体积 |
+| --- | --- | --- |
+| `WebNovelTranslator-Setup-<版本号>.exe` | 标准版 | 约 69 MB |
+| `WebNovelTranslator-Offline-Setup-<版本号>.exe` | **离线版** | 约 82 MB |
+
+> v3.1.1 起只提供安装版。安装版可自定义安装目录并创建桌面 / 开始菜单快捷方式；
+> 便携版与安装版内容完全一致，只是多一份约 69 MB 的产物，已下架。
+> 确实需要免安装时，把安装包用 7-Zip 解开、或直接使用构建输出的
+> `release/win-unpacked/` 目录即可。
 
 1. 双击运行。若出现 SmartScreen 提示，点击 **更多信息 → 仍要运行**（安装包未做代码签名）。
 2. 首次启动请在 **设置** 页配置 API 密钥，即可开始使用。
@@ -45,7 +48,7 @@
 | 能力 | 标准版 | 离线版 |
 | --- | --- | --- |
 | 在线翻译（DeepSeek / Kimi / 任意 OpenAI 兼容接口） | ✅ | ✅ |
-| 术语表 / 翻译历史 / EPUB 导出 / 划词翻译 / 浏览器提取 | ✅ | ✅ |
+| 术语表 / 翻译历史 / EPUB 导出 / 快捷键翻译 / 浏览器提取 | ✅ | ✅ |
 | **离线翻译** | ❌ 设置页会明确禁用该开关并说明原因 | ✅ 需先联网下载约 870 MB 模型，之后断网也能翻译 |
 
 - **能用网络调 API 翻译，就下标准版**——更小，功能完全够用。
@@ -101,10 +104,10 @@ npm start
 # 3. 仅构建（主进程 tsc + 渲染进程 esbuild）
 npm run build
 
-# 4. 打包「标准版」安装包 + 便携版（输出到 release/）
+# 4. 打包「标准版」安装包（输出到 release/）
 npm run dist
 
-# 5. 打包「离线版」安装包 + 便携版（含本地推理引擎，输出到 release-offline/）
+# 5. 打包「离线版」安装包（含本地推理引擎，输出到 release-offline/）
 npm run dist:offline
 ```
 
@@ -114,8 +117,10 @@ npm run dist:offline
 > 国内网络提示：electron 二进制与 electron-builder 工具请使用 npmmirror 镜像：
 > `ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/`
 > `ELECTRON_BUILDER_BINARIES_MIRROR=https://npmmirror.com/mirrors/electron-builder-binaries/`
-> 离线模型默认从 `huggingface.co` 拉取；若该域名不可达，可用环境变量
-> `WNT_HF_HOST=https://hf-mirror.com` 指定镜像站。
+> 离线模型默认按 `huggingface.co` → `hf-mirror.com` 的顺序尝试，连不上前者会自动
+> 切到后者，因此国内网络直接点「下载模型」即可，无需额外配置。
+> 需要完全接管这份候选名单时，用逗号分隔的 `WNT_HF_HOST` 覆盖，例如
+> `WNT_HF_HOST=https://my-mirror.example`。
 
 ### 关于体积
 
@@ -127,7 +132,9 @@ npm run dist:offline
 两个版本的体积几乎全部来自 Electron 自身（解包后约 230 MB，Chromium 语言包已
 裁到只剩 `en-US` / `zh-CN`）。真正能压的是 app.asar：v3.1.0 把散落在各处的
 开发产物清掉后，标准版的 asar 从 21.8 MB 降到 **9.8 MB**（约 −12 MB），
-安装包随之瘦身约 2.5 MB。裁减清单见 `scripts/packaging-shared.js`：
+安装包随之瘦身约 2.5 MB；v3.1.1 又下架了便携版，每个版本的发布产物体积
+从「两份合计约 137 MB」降到 **一份约 69 / 82 MB**。裁减清单见
+`scripts/packaging-shared.js`：
 
 - better-sqlite3 的 C 源码与头文件（9.3 MB）只在编译期用得到；
 - 只被离线引擎用到的旁支依赖（`protobufjs`、`onnx-proto`、`sharp` 的着色工具链等），
@@ -175,14 +182,14 @@ npm run dist:offline
 
 ## English
 
-**Floating Web Novel Translator** — a tray-driven web-novel translator built with Electron + React (v3.1.0).
+**Floating Web Novel Translator** — a tray-driven web-novel translator built with Electron + React (v3.1.1).
 
-Key features: system-tray + global-hotkey interaction (Ctrl+Shift+Z) that opens a stable frameless popup window, glossary as a first-class feature (switch the active glossary right from the translate toolbar), built-in chapter extractor, SQLite translation history (search / export CSV·JSON), EPUB export, optional offline translation via `transformers.js` (NLLB-200), presets for DeepSeek / Kimi (Moonshot), auto-update check, Chinese (default) / English UI, window-state persistence, and clean exit with no lingering processes.
+Key features: system-tray + global-hotkey interaction (Ctrl+Shift+Z) that opens a stable frameless popup window, glossary as a first-class feature (switch the active glossary right from the translate toolbar), Mozilla-Readability chapter extractor, SQLite translation history (search / export CSV·JSON), EPUB export, optional offline translation via `transformers.js` (NLLB-200), presets for DeepSeek / Kimi (Moonshot), auto-update check, Chinese (default) / English UI that also switches the native menus and error messages, light/dark theme that follows the OS, window-state persistence, and clean exit with no lingering processes.
 
-- **Install**: download the `.exe` from the [Releases](https://github.com/SongFengYunHe/WebNovelTranslator/releases) page.
+- **Install**: download the `.exe` from the [Releases](https://github.com/SongFengYunHe/WebNovelTranslator/releases) page. Installer only — portable builds were dropped in v3.1.1.
 - **Unsigned-app note**: SmartScreen may warn; click **More info → Run anyway**.
 - **Hotkey**: copy the text you want to translate, then press the shortcut — the shortcut translates the clipboard.
-- **Offline mode**: the **Offline** installer bundles the inference engine; the standard installer excludes it to stay small and disables the toggle with an explanation instead of offering a download it cannot use. The ~870 MB model is always fetched on demand.
+- **Offline mode**: the **Offline** installer bundles the inference engine; the standard installer excludes it to stay small and disables the toggle with an explanation instead of offering a download it cannot use. The ~870 MB model is always fetched on demand, trying `huggingface.co` and falling back to `hf-mirror.com` automatically (override the candidate list with the comma-separated `WNT_HF_HOST`).
 - **Build**: `npm install && npm start` / `npm run dist`.
 
 ---
