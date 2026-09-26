@@ -59,7 +59,7 @@ jobs:
       # Signing is fully disabled (see the env above + electron-builder.config.js).
       # The app icon + version metadata are applied by the afterPack hook with the
       # committed tools/rcedit-x64.exe, so CI and local builds behave identically.
-      - name: Package installer & portable exe
+      - name: Package installer
         run: npm run dist:ci
 
       - name: Upload artifacts

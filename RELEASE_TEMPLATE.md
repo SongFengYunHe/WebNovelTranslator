@@ -32,17 +32,15 @@
 
 ## 安装
 
-本版本提供 **两个版本 × 两种形态**，请只选其中一个文件下载：
+本版本提供 **两个版本**，请只选其中一个文件下载：
 
-**标准版**（不含离线推理引擎，约 71 MB）
+**标准版**（不含离线推理引擎，约 69 MB）
 
-- `WebNovelTranslator-Setup-<版本号>.exe` —— 安装版（推荐）
-- `WebNovelTranslator-<版本号>-portable.exe` —— 免安装便携版
+- `WebNovelTranslator-Setup-<版本号>.exe` —— 安装版（可自定义目录、建快捷方式）
 
-**离线版**（含离线推理引擎，约 84 MB）
+**离线版**（含离线推理引擎，约 82 MB）
 
 - `WebNovelTranslator-Offline-Setup-<版本号>.exe` —— 安装版
-- `WebNovelTranslator-Offline-<版本号>-portable.exe` —— 免安装便携版
 
 > **该下哪个？** 能用网络调 API 翻译就选**标准版**；经常断网、或无网络设备上使用才需要**离线版**（离线版仍需联网一次下载约 870 MB 模型）。
 >
@@ -54,12 +52,12 @@
 
 ## 上传清单（发布者自查）
 
-用 `npm run dist` 与 `npm run dist:offline` 各构建一次（两者输出目录独立，互不覆盖），产物分别位于 `release/` 与 `release-offline/`。上传到 Release 附件时**四个 exe 都要带上**：
+用 `npm run dist` 与 `npm run dist:offline` 各构建一次（两者输出目录独立，互不覆盖），产物分别位于 `release/` 与 `release-offline/`。上传到 Release 附件时带上这两个 exe 与清单：
 
 | 目录 | 文件 |
 | --- | --- |
-| `release/` | `WebNovelTranslator-Setup-*.exe`、`WebNovelTranslator-*-portable.exe`、`latest.yml` |
-| `release-offline/` | `WebNovelTranslator-Offline-Setup-*.exe`、`WebNovelTranslator-Offline-*-portable.exe` |
+| `release/` | `WebNovelTranslator-Setup-*.exe`、`latest.yml` |
+| `release-offline/` | `WebNovelTranslator-Offline-Setup-*.exe` |
 
 > `latest.yml` 是自动更新检查所依赖的清单，**必须上传**（放在 Release 附件根目录）。
 > 注意：`release-offline/` 也会生成自己的 `latest.yml`，与标准版的同名——二者只需上传**标准版那一份**即可，否则会互相覆盖。若要分别发布两个版本，请将离线版的清单另行命名。

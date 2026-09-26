@@ -23,7 +23,7 @@
  *   - `asar: true`  —— 把应用打包进单个归档。
  *   - `files`       —— 只分发 dist/public/resources/package.json（+ 生产环境
  *                      node_modules，由 electron-builder 自动加入）。
- *   - NSIS + portable 使用 `compression: 'maximum'`。
+ *   - NSIS 安装包使用 `compression: 'maximum'`。
  *   - `electronLanguages: ['en-US', 'zh-CN']` —— 从打包后的应用中移除约 37 MB
  *     未使用的 Chromium 语言包（55 个文件）。
  */
