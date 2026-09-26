@@ -38,6 +38,22 @@ const UPDATE_FEED_URL = `${REPO_URL}/releases/latest/download/`;
 
 const { buildFiles } = require('./scripts/packaging-shared.js');
 
+/**
+ * Electron 二进制镜像。
+ *
+ * 默认用 npmmirror——部分国内网络访问不了 GitHub 的 release 资源。但 **GitHub
+ * Actions 上要关掉**：runner 直连官方源没有任何问题，而镜像站是第三方托管，它曾
+ * 用一次 504 把整条流水线打挂（Electron 二进制下不下来，跟代码毫无关系）。
+ *
+ * 判定用 `GITHUB_ACTIONS` 而不是 `CI`：后者常被本地工具链设成 "true"（本机的
+ * 开发环境就是），拿它当开关会把维护者自己的打包也切去官方源。
+ *
+ * 需要指定别的镜像时用 `WNT_ELECTRON_MIRROR` 覆盖（留空即强制走官方源）。
+ */
+const ELECTRON_MIRROR =
+  process.env.WNT_ELECTRON_MIRROR ??
+  (process.env.GITHUB_ACTIONS === 'true' ? '' : 'https://npmmirror.com/mirrors/electron/');
+
 module.exports = {
   appId: 'com.webnoveltranslator.app',
   productName: 'WebNovelTranslator',
@@ -99,8 +115,6 @@ module.exports = {
 
   npmRebuild: false,
 
-  // Electron 二进制镜像（部分国内网络无法访问 GitHub）。
-  electronDownload: {
-    mirror: 'https://npmmirror.com/mirrors/electron/',
-  },
+  // 见文件顶部的说明：本地默认走 npmmirror，CI 走官方源。
+  ...(ELECTRON_MIRROR ? { electronDownload: { mirror: ELECTRON_MIRROR } } : {}),
 };

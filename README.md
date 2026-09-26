@@ -114,9 +114,11 @@ npm run dist:offline
 > 两个版本**各自清理自己的输出目录**（`release/` 与 `release-offline/`），
 > 因此可以在同一次会话里依次构建，互不覆盖。
 
-> 国内网络提示：electron 二进制与 electron-builder 工具请使用 npmmirror 镜像：
-> `ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/`
-> `ELECTRON_BUILDER_BINARIES_MIRROR=https://npmmirror.com/mirrors/electron-builder-binaries/`
+> 国内网络提示：打包时默认已走 npmmirror 下载 Electron 二进制（CI 上会自动改用
+> 官方源，免得被第三方镜像的故障连累）。需要换镜像时用
+> `WNT_ELECTRON_MIRROR=https://...` 覆盖，留空即强制走官方源。
+> electron-builder 的辅助二进制仍然需要
+> `ELECTRON_BUILDER_BINARIES_MIRROR=https://npmmirror.com/mirrors/electron-builder-binaries/`。
 > 离线模型默认按 `huggingface.co` → `hf-mirror.com` 的顺序尝试，连不上前者会自动
 > 切到后者，因此国内网络直接点「下载模型」即可，无需额外配置。
 > 需要完全接管这份候选名单时，用逗号分隔的 `WNT_HF_HOST` 覆盖，例如
