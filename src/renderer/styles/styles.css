@@ -671,8 +671,14 @@ code {
 /* ---- 设置面板 ---- */
 /* v3.0.1：设置容器覆盖整个窗口（height 100vh、overflow hidden、灰色背景）。
    `max-height: 100%` 把它限制在固定页头下方的区域内，使固定的页脚绝不会被裁切。
-   表单内容在 `.settings-scroll` 内滚动；保存/测试栏固定在底部。 */
+   表单内容在 `.settings-scroll` 内滚动；保存/测试栏固定在底部。
+
+   `flex: 1` 不能少：父级 `.app-body.is-settings` 是横向 flex 容器，而这是个
+   「宽度由内容决定」的 flex item——表单被 `--form-max` 限宽后，面板就跟着缩到
+   620px 宽，窗口右侧留出一大片空白、滚动条卡在窗口中间。让它吸收主轴剩余空间
+   才是「铺满窗口」。 */
 .settings-panel {
+  flex: 1;
   height: 100vh;
   max-height: 100%;
   overflow: hidden;
