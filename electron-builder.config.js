@@ -74,10 +74,9 @@ module.exports = {
   asarUnpack: ['node_modules/better-sqlite3/build/**'],
 
   win: {
-    target: [
-      { target: 'nsis', arch: ['x64'] },
-      { target: 'portable', arch: ['x64'] },
-    ],
+    // 只出安装版。便携版与安装版内容一致，白白让每个版本的发布产物体积翻倍
+    // （各自约 69MB），且免安装场景可以直接解压 win-unpacked，没有必须保留的理由。
+    target: [{ target: 'nsis', arch: ['x64'] }],
     icon: 'resources/icon.ico',
     executableName: 'WebNovelTranslator',
     requestedExecutionLevel: 'asInvoker',
@@ -96,10 +95,6 @@ module.exports = {
     createStartMenuShortcut: true,
     shortcutName: 'Web Novel Translator',
     artifactName: '${productName}-Setup-${version}.${ext}',
-  },
-
-  portable: {
-    artifactName: '${productName}-${version}-portable.${ext}',
   },
 
   npmRebuild: false,

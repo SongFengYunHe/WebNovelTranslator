@@ -43,9 +43,4 @@ module.exports = {
     ...base.nsis,
     artifactName: '${productName}-Offline-Setup-${version}.${ext}',
   },
-
-  portable: {
-    ...base.portable,
-    artifactName: '${productName}-Offline-${version}-portable.${ext}',
-  },
 };
